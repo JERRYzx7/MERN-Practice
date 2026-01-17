@@ -25,7 +25,7 @@ describe("User Entity (領域實體測試)", () => {
     const result = User.create(invalidProps);
 
     expect(result.isFailure).toBe(true);
-    expect(result.error).toBe("無效的 Email 格式");
+    expect(result.error).toBe("Invalid email address.");
   });
 
   it("如果名稱太短，應該回傳失敗的 Result", () => {
@@ -37,6 +37,6 @@ describe("User Entity (領域實體測試)", () => {
     const result = User.create(shortNameProps);
 
     expect(result.isFailure).toBe(true);
-    expect(result.error).toBe("名稱至少需要 2 個字");
+    expect(result.error).toBe("Name must be at least 2 characters long.");
   });
 });

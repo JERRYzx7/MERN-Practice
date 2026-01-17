@@ -40,7 +40,7 @@ describe("Group Entity (群組實體測試)", () => {
       const result = group.addMember(mockFriendId);
 
       expect(result.isFailure).toBe(true);
-      expect(result.error).toBe("不能向個人空間加入其他成員");
+      expect(result.error).toBe("個人群組不能添加成員");
     });
   });
 
