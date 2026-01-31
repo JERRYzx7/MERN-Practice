@@ -31,7 +31,7 @@ describe("SplitService 分帳邏輯鮮血測試", () => {
     const result = SplitService.validateBalance(totalAmount, payers, splits);
 
     expect(result.isSuccess).toBe(true);
-    expect(splits[0]!.amount).toBe(33.34); // 餘數處理驗證
+    expect(splits[0]!.amount).toBe(34); // 餘數處理驗證
   });
 
   describe("百分比分帳邏輯", () => {

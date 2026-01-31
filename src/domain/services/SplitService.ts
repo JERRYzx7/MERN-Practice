@@ -44,14 +44,14 @@ export class SplitService {
     totalAmount: number,
     userIds: string[],
   ): Split[] {
-    const perPerson = Math.floor((totalAmount / userIds.length) * 100) / 100;
+    // 使用整數除法計算每人分攤金額
+    const perPerson = Math.floor(totalAmount / userIds.length);
     const splits = userIds.map(
       (id) => new Split({ userId: id, amount: perPerson }),
     );
 
-    // 處理餘數，補在第一個人身上
-    const totalCurrent = perPerson * userIds.length;
-    const remainder = Math.round((totalAmount - totalCurrent) * 100) / 100;
+    // 計算餘數並補在第一個人身上
+    const remainder = totalAmount - perPerson * userIds.length;
 
     if (remainder !== 0 && splits.length > 0) {
       // 使用 Split Entity 的 adjustAmount 方法處理餘數
