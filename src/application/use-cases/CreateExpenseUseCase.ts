@@ -72,7 +72,8 @@ export class CreateExpenseUseCase {
       groupId: request.groupId,
       payments,
       splits,
-      date: new Date(),
+      date: request.date ? new Date(request.date) : new Date(),
+      category: request.category ?? "",
     });
 
     if (expenseResult.isFailure) return Result.fail(expenseResult.error!);

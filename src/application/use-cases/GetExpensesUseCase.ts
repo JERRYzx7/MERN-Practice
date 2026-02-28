@@ -15,6 +15,8 @@ export interface ExpenseDTO {
   currency: string;
   description: string;
   splits: { userId: string; amount: number }[];
+  date: string;
+  category: string;
 }
 
 export class GetExpensesUseCase {
@@ -34,6 +36,8 @@ export class GetExpensesUseCase {
       currency: e.currency,
       description: e.description,
       splits: e.splits,
+      date: (e.date ?? new Date()).toISOString(),
+      category: e.category,
     }));
     return Result.ok(dtos);
   }

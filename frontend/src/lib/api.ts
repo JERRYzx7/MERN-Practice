@@ -117,6 +117,8 @@ export interface ExpenseRecord {
   currency: string;
   description: string;
   splits: { userId: string; amount: number }[];
+  date: string;
+  category: string;
 }
 
 export interface Member {
@@ -181,6 +183,8 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
       splitType: "EQUAL";
       memberIds: string[];
     }
@@ -189,6 +193,8 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
       splitType: "PERCENTAGE";
       percentageMap: Record<string, number>;
     }
@@ -197,6 +203,8 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
       splitType: "EXACT";
       exactMap: Record<string, number>;
     };

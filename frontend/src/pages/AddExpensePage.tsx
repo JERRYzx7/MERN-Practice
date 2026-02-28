@@ -17,6 +17,40 @@ const SPLIT_MODE_LABELS: Record<SplitMode, { label: string; icon: string }> = {
   EXACT: { label: "指定金額", icon: "$" },
 };
 
+// ── Category presets ──────────────────────────────────────
+const PRESET_CATEGORIES = [
+  { key: "food",      label: "餐飲",  icon: "🍽" },
+  { key: "transport", label: "交通",  icon: "🚗" },
+  { key: "housing",   label: "住房",  icon: "🏠" },
+  { key: "shopping",  label: "購物",  icon: "🛒" },
+  { key: "entertainment", label: "娛樂", icon: "🎮" },
+  { key: "health",    label: "醫療",  icon: "💊" },
+  { key: "education", label: "教育",  icon: "📚" },
+  { key: "travel",    label: "旅遊",  icon: "✈️" },
+  { key: "tech",      label: "3C",    icon: "💻" },
+  { key: "gift",      label: "禮物",  icon: "🎁" },
+  { key: "work",      label: "工作",  icon: "💼" },
+  { key: "sports",    label: "運動",  icon: "🏋️" },
+];
+const MAX_CUSTOM = 87; // 99 - 12 presets
+const CUSTOM_STORAGE_KEY = "splitquest-custom-categories";
+
+function loadCustomCategories(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_STORAGE_KEY) ?? "[]");
+  } catch { return []; }
+}
+function saveCustomCategory(name: string): void {
+  const existing = loadCustomCategories();
+  if (existing.includes(name) || existing.length >= MAX_CUSTOM) return;
+  localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify([...existing, name]));
+}
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface PaymentRow {
   userId: string;
   amount: string;
@@ -33,6 +67,11 @@ export default function AddExpensePage() {
   const { data: members = [] } = useGroupMembers(isPersonal ? undefined : groupId);
 
   const [description, setDescription] = useState("");
+  const [expenseDate, setExpenseDate] = useState(todayStr());
+  const [category, setCategory] = useState("");
+  const [customInput, setCustomInput] = useState("");
+  const [customCategories, setCustomCategories] = useState<string[]>(loadCustomCategories);
+
   // Personal: single amount field
   const [personalAmount, setPersonalAmount] = useState("");
 
@@ -99,7 +138,12 @@ export default function AddExpensePage() {
 
   const mutation = useMutation({
     mutationFn: () => {
-      const base = { description: description.trim(), groupId: groupId! };
+      const base = {
+        description: description.trim(),
+        groupId: groupId!,
+        date: expenseDate,
+        category: category || undefined,
+      };
 
       if (isPersonal) {
         const amt = parseFloat(personalAmount);
@@ -185,6 +229,96 @@ export default function AddExpensePage() {
               required
               autoFocus
             />
+          </PixelCard>
+
+          {/* Date */}
+          <PixelCard title="日期" titleIcon="📅">
+            <input
+              type="date"
+              value={expenseDate}
+              onChange={(e) => setExpenseDate(e.target.value)}
+              className="bg-pixel-card border-2 border-pixel-border px-4 py-3 font-vt text-vt-base text-pixel-text w-full focus:outline-none focus-visible:border-pixel-gold"
+            />
+          </PixelCard>
+
+          {/* Category */}
+          <PixelCard title="分類" titleIcon="🏷">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3">
+              {/* None */}
+              <button
+                type="button"
+                onClick={() => setCategory("")}
+                className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                  category === ""
+                    ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
+                    : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                }`}
+              >
+                <span className="text-lg">—</span>
+                <span className="font-pixel text-[7px]">未分類</span>
+              </button>
+
+              {PRESET_CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setCategory(c.label)}
+                  className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                    category === c.label
+                      ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
+                      : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                  }`}
+                >
+                  <span className="text-lg">{c.icon}</span>
+                  <span className="font-pixel text-[7px]">{c.label}</span>
+                </button>
+              ))}
+
+              {customCategories.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setCategory(name)}
+                  className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                    category === name
+                      ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
+                      : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                  }`}
+                >
+                  <span className="text-lg">🏷</span>
+                  <span className="font-pixel text-[7px] truncate w-full text-center">{name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom category input */}
+            {customCategories.length < MAX_CUSTOM && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  placeholder="自訂分類名稱"
+                  maxLength={20}
+                  className="flex-1 bg-pixel-card border-2 border-pixel-border px-3 py-2 font-vt text-vt-sm text-pixel-text focus:outline-none focus-visible:border-pixel-gold placeholder:text-pixel-muted"
+                />
+                <button
+                  type="button"
+                  disabled={!customInput.trim()}
+                  onClick={() => {
+                    const name = customInput.trim();
+                    if (!name) return;
+                    saveCustomCategory(name);
+                    setCustomCategories(loadCustomCategories());
+                    setCategory(name);
+                    setCustomInput("");
+                  }}
+                  className="border-2 border-pixel-border px-3 py-2 font-pixel text-pixel-xs text-pixel-muted hover:border-pixel-gold hover:text-pixel-gold disabled:opacity-40 transition-colors"
+                >
+                  ＋ 儲存
+                </button>
+              </div>
+            )}
           </PixelCard>
 
           {/* ── Personal: simple amount ── */}

@@ -31,4 +31,8 @@ export type CreateExpenseDTO = {
   /** 多付款人；totalAmount = sum(payments.map(p => p.amount)) */
   payments: PaymentDTO[];
   groupId: string;
+  /** ISO 日期字串，選填，預設當天 */
+  date?: string | undefined;
+  /** 分類，選填 */
+  category?: string | undefined;
 } & SplitDataDTO;
