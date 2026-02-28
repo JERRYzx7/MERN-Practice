@@ -11,6 +11,7 @@ describe("Expense Entity 核心邏輯測試", () => {
       const result = Expense.create({
         description: "買午餐",
         amount: 300,
+        currency: "TWD",
         payerId: validUser1,
         groupId: validGroup,
         splits: [
@@ -28,6 +29,7 @@ describe("Expense Entity 核心邏輯測試", () => {
       const result = Expense.create({
         description: "除不盡的測試",
         amount: 100,
+        currency: "TWD",
         payerId: validUser1,
         groupId: validGroup,
         splits: [
@@ -47,6 +49,7 @@ describe("Expense Entity 核心邏輯測試", () => {
       const result = Expense.create({
         description: "   ", // 全空白
         amount: 100,
+        currency: "TWD",
         payerId: validUser1,
         groupId: validGroup,
         splits: [new Split({ userId: validUser1, amount: 100 })],
@@ -60,6 +63,7 @@ describe("Expense Entity 核心邏輯測試", () => {
       const result = Expense.create({
         description: "免費的東西",
         amount: 0,
+        currency: "TWD",
         payerId: validUser1,
         groupId: validGroup,
         splits: [],
@@ -73,6 +77,7 @@ describe("Expense Entity 核心邏輯測試", () => {
       const result = Expense.create({
         description: "算錯錢的帳單",
         amount: 100,
+        currency: "TWD",
         payerId: validUser1,
         groupId: validGroup,
         splits: [

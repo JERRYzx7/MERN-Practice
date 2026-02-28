@@ -11,21 +11,20 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
 
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
-  // Since we don't have a real login endpoint yet, we register and login in one step
   const mutation = useMutation({
-    mutationFn: () => userApi.register({ name: name.trim(), email: email.trim() }),
+    mutationFn: () => userApi.login({ email: email.trim(), password }),
     onSuccess: (res) => {
-      login({ id: res.data.id, name: res.data.name, email: res.data.email, personalGroupId: res.data.personalGroupId });
+      login({ id: res.data.id, name: res.data.name, email: res.data.email, personalGroupId: res.data.personalGroupId, token: res.data.token });
       navigate("/dashboard");
     },
     onError: (err) => {
       if (err instanceof ApiError) {
-        if (err.status === 409) {
-          setApiError("此 Email 已被註冊，請直接使用「以此身份繼續」");
+        if (err.status === 401) {
+          setApiError("Email 或密碼錯誤");
         } else {
           setApiError(err.message);
         }
@@ -37,7 +36,7 @@ export default function LoginPage() {
     const newErrors: Record<string, string> = {};
     if (!email.trim()) newErrors["email"] = "Email 不能為空";
     else if (!email.includes("@")) newErrors["email"] = "Email 格式不正確";
-    if (!name.trim() || name.trim().length < 2) newErrors["name"] = "名稱至少 2 個字";
+    if (!password) newErrors["password"] = "密碼不能為空";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -71,16 +70,6 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} noValidate aria-label="登入表單">
             <div className="flex flex-col gap-4">
               <PixelInput
-                label="冒險者名稱"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                error={errors["name"]}
-                placeholder="輸入你的名稱..."
-                autoComplete="name"
-                required
-              />
-              <PixelInput
                 label="Email"
                 type="email"
                 value={email}
@@ -88,6 +77,16 @@ export default function LoginPage() {
                 error={errors["email"]}
                 placeholder="hero@quest.com"
                 autoComplete="email"
+                required
+              />
+              <PixelInput
+                label="密碼"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={errors["password"]}
+                placeholder="••••••••"
+                autoComplete="current-password"
                 required
               />
 

@@ -22,6 +22,7 @@ type SplitDataDTO = EqualSplitDTO | PercentageSplitDTO | ExactSplitDTO;
 export type CreateExpenseDTO = {
   description: string;
   totalAmount: number;
+  currency?: string;
   payerId: string;
   groupId: string;
 } & SplitDataDTO;

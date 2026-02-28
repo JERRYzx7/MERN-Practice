@@ -1,11 +1,27 @@
 const BASE = "/api";
 
+function getToken(): string | null {
+  try {
+    const raw = localStorage.getItem("splitquest-auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { state?: { token?: string } };
+    return parsed.state?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const token = getToken();
+  const authHeader: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
+    headers: { "Content-Type": "application/json", ...authHeader, ...options?.headers },
     ...options,
   });
 
@@ -38,16 +54,28 @@ export class ApiError extends Error {
 export interface RegisterRequest {
   name: string;
   email: string;
+  password: string;
 }
 
-export interface RegisterResponse {
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
   success: true;
-  data: { id: string; email: string; name: string; personalGroupId: string };
+  data: { id: string; email: string; name: string; personalGroupId: string; token: string };
 }
 
 export const userApi = {
   register: (body: RegisterRequest) =>
-    request<RegisterResponse>("/users/register", {
+    request<AuthResponse>("/users/register", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  login: (body: LoginRequest) =>
+    request<AuthResponse>("/users/login", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -101,6 +129,7 @@ export type CreateExpenseRequest =
   | {
       description: string;
       totalAmount: number;
+      currency?: string;
       payerId: string;
       groupId: string;
       splitType: "EQUAL";
@@ -109,6 +138,7 @@ export type CreateExpenseRequest =
   | {
       description: string;
       totalAmount: number;
+      currency?: string;
       payerId: string;
       groupId: string;
       splitType: "PERCENTAGE";
@@ -117,6 +147,7 @@ export type CreateExpenseRequest =
   | {
       description: string;
       totalAmount: number;
+      currency?: string;
       payerId: string;
       groupId: string;
       splitType: "EXACT";

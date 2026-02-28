@@ -63,7 +63,7 @@
   - `e2e/api.spec.ts` — 17 個測試案例覆蓋所有 API 端點
   - `playwright.config.ts` — webServer 自動啟動 server（port 3001）
 
-## 🟡 Phase 6: Frontend - React SPA (In Progress — 95%)
+## 🟢 Phase 6: Frontend - React SPA (Completed)
 
 ### 技術選型
 - Vite + React 18 + TypeScript（Strict Mode）
@@ -85,27 +85,55 @@
 - [x] `src/hooks/useLocalGroups.ts`（群組本地狀態，Zustand persist）
 - [x] 元件庫：`PixelButton`、`PixelCard`、`PixelInput`、`PixelBadge`、`PixelLoader`（a11y 完整）
 - [x] Layout：`Layout.tsx` + `Navbar.tsx`（桌面 top bar + 手機 bottom nav）
-- [x] 頁面：`LoginPage`、`RegisterPage`、`DashboardPage`、`GroupsPage`
-- [x] 頁面：`GroupDetailPage`、`AddExpensePage`（EQUAL/PERCENTAGE/EXACT）、`BalancePage`
+- [x] 頁面（7個）：`LoginPage`、`RegisterPage`、`DashboardPage`、`GroupsPage`、`GroupDetailPage`、`AddExpensePage`、`BalancePage`
 - [x] `public/favicon.svg`（像素金幣風格）
+- [x] `generate-icons.mjs`（純 Node.js PWA icon 產生腳本）
+- [x] `UserController.register` 回傳 `personalGroupId`
 
-### 待完成
-- [ ] PWA icons（`public/icons/pwa-192.png`、`pwa-512.png`、`pwa-96.png`）
-  - 使用者手動建立 `frontend/public/icons/` 並執行 `node scripts/generate-icons.mjs`
-- [ ] 前端 E2E 測試（Playwright）
+---
 
-### 後端新增
-- [x] `UserController.register` 回傳 `personalGroupId`（讓前端可以直接查詢個人群組結餘）
+## 🟢 Phase 7: 密碼驗證 + JWT Auth + Docker MongoDB (Completed)
 
-### 執行方式
-```bash
-# 後端（D:\mern）
-npm run dev
+### 完成項目
 
-# 前端（D:\mern\frontend）
-npm install
-npm run dev
-```
+#### Domain / Infrastructure 層
+- [x] `User` entity 新增 `passwordHash`、`avatarUrl`、`oauthProvider`、`oauthId` 欄位
+- [x] `UserSchema` 新增對應 DB 欄位（全部 nullable）
+- [x] `MongoUserRepository` 更新 save / findById / findByEmail / findByIds
+- [x] `Expense` entity + `ExpenseSchema` 新增 `currency: string`（必填，default `"TWD"`）
+- [x] `MongoExpenseRepository` 更新 save / toDomain
+- [x] `CreateExpenseDTO` + `CreateExpenseUseCase` 加入 `currency`
+- [x] `ExpenseController` Zod schema 加入 `currency`
+
+#### Auth 服務層
+- [x] `src/application/services/IPasswordService.ts`（策略模式介面）
+- [x] `src/application/services/IJwtService.ts`（策略模式介面）
+- [x] `src/infrastructure/services/BcryptPasswordService.ts`（bcrypt salt 12）
+- [x] `src/infrastructure/services/JwtService.ts`（HS256，JWT_SECRET env var）
+
+#### Interface 層
+- [x] `UserController.register` — hash 密碼、回傳 JWT token
+- [x] `UserController.login` — 驗證密碼、簽發 JWT（`POST /api/users/login`）
+- [x] `src/interfaces/middlewares/authMiddleware.ts` — Bearer token 驗證，注入 `req.userId`
+- [x] `userRoutes.ts` 新增 `POST /login`
+- [x] `app.ts` `/api/groups` + `/api/expenses` 受 auth middleware 保護
+
+#### DI Container
+- [x] `container.ts` 注入 `BcryptPasswordService` + `JwtService`
+- [x] `AppContainer` interface 新增 `jwtService` 供 `app.ts` 使用
+
+#### Docker
+- [x] `docker-compose.yml`（MongoDB 7.0，named volume，預留 Redis slot）
+- [x] `.env.example`（MONGODB_URI, JWT_SECRET, JWT_EXPIRES_IN, PORT）
+
+#### 前端
+- [x] `api.ts` — `userApi.login`、`AuthResponse`（含 token）、所有請求自動帶 Authorization header、`currency` 欄位
+- [x] `authStore.ts` — 新增 `token` 欄位
+- [x] `LoginPage.tsx` — 改用真實 `POST /api/users/login` + 密碼欄位
+- [x] `RegisterPage.tsx` — 新增密碼 + 確認密碼欄位
+
+#### 文件
+- [x] `api-doc.md` — 完整 API 文件（所有端點、欄位、錯誤碼、JWT payload）
 
 ---
 
@@ -119,4 +147,6 @@ npm run dev
 | Phase 3: Application Layer | ✅ 完成 | 100% |
 | Phase 4: Infrastructure Layer | ✅ 完成 | 100% |
 | Phase 5: Interface Layer | ✅ 完成 | 100% |
-| Phase 6: Frontend | 🟡 進行中 | 95% |
+| Phase 6: Frontend SPA | ✅ 完成 | 100% |
+| Phase 7: Auth + Docker | ✅ 完成 | 100% |
+| Phase 8: OAuth（產品上線後）| ⬜ 待規劃 | 0% |

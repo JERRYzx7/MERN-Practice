@@ -10,14 +10,14 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
 
-  const [form, setForm] = useState({ name: "", email: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () => userApi.register(form),
+    mutationFn: () => userApi.register({ name: form.name.trim(), email: form.email.trim(), password: form.password }),
     onSuccess: (res) => {
-      login({ id: res.data.id, name: res.data.name, email: res.data.email, personalGroupId: res.data.personalGroupId });
+      login({ id: res.data.id, name: res.data.name, email: res.data.email, personalGroupId: res.data.personalGroupId, token: res.data.token });
       navigate("/dashboard");
     },
     onError: (err) => {
@@ -31,6 +31,8 @@ export default function RegisterPage() {
     const e: Record<string, string> = {};
     if (form.name.trim().length < 2) e["name"] = "名稱至少 2 個字";
     if (!form.email.includes("@")) e["email"] = "Email 格式不正確";
+    if (form.password.length < 8) e["password"] = "密碼至少 8 個字元";
+    if (form.password !== form.confirm) e["confirm"] = "兩次密碼不一致";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -80,6 +82,26 @@ export default function RegisterPage() {
                 error={errors["email"]}
                 placeholder="hero@quest.com"
                 autoComplete="email"
+                required
+              />
+              <PixelInput
+                label="密碼"
+                type="password"
+                value={form.password}
+                onChange={update("password")}
+                error={errors["password"]}
+                placeholder="至少 8 個字元"
+                autoComplete="new-password"
+                required
+              />
+              <PixelInput
+                label="確認密碼"
+                type="password"
+                value={form.confirm}
+                onChange={update("confirm")}
+                error={errors["confirm"]}
+                placeholder="再次輸入密碼"
+                autoComplete="new-password"
                 required
               />
 

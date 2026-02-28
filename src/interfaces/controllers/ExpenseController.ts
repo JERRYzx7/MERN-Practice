@@ -7,6 +7,7 @@ const CreateExpenseSchema = z.discriminatedUnion("splitType", [
   z.object({
     description: z.string().min(1),
     totalAmount: z.number().positive(),
+    currency: z.string().default("TWD"),
     payerId: z.string().min(1),
     groupId: z.string().min(1),
     splitType: z.literal("EQUAL"),
@@ -15,6 +16,7 @@ const CreateExpenseSchema = z.discriminatedUnion("splitType", [
   z.object({
     description: z.string().min(1),
     totalAmount: z.number().positive(),
+    currency: z.string().default("TWD"),
     payerId: z.string().min(1),
     groupId: z.string().min(1),
     splitType: z.literal("PERCENTAGE"),
@@ -23,6 +25,7 @@ const CreateExpenseSchema = z.discriminatedUnion("splitType", [
   z.object({
     description: z.string().min(1),
     totalAmount: z.number().positive(),
+    currency: z.string().default("TWD"),
     payerId: z.string().min(1),
     groupId: z.string().min(1),
     splitType: z.literal("EXACT"),

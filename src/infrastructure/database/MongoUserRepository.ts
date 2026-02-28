@@ -6,13 +6,13 @@ export class MongoUserRepository implements IUserRepository {
   async findById(id: string): Promise<User | null> {
     const doc = await UserModel.findById(id).lean();
     if (!doc) return null;
-    return this.toDomain(doc._id, doc.name, doc.email, doc.personalGroupId);
+    return this.toDomain(doc);
   }
 
   async findByEmail(email: string): Promise<User | null> {
     const doc = await UserModel.findOne({ email }).lean();
     if (!doc) return null;
-    return this.toDomain(doc._id, doc.name, doc.email, doc.personalGroupId);
+    return this.toDomain(doc);
   }
 
   async save(user: User): Promise<void> {
@@ -23,6 +23,10 @@ export class MongoUserRepository implements IUserRepository {
         name: user.name,
         email: user.email,
         personalGroupId: user.personalGroupId,
+        passwordHash: user.passwordHash ?? null,
+        avatarUrl: user.avatarUrl ?? null,
+        oauthProvider: user.oauthProvider ?? null,
+        oauthId: user.oauthId ?? null,
       },
       { upsert: true, new: true },
     );
@@ -30,24 +34,30 @@ export class MongoUserRepository implements IUserRepository {
 
   async findByIds(ids: string[]): Promise<User[]> {
     const docs = await UserModel.find({ _id: { $in: ids } }).lean();
-    return docs.map((d) =>
-      this.toDomain(d._id, d.name, d.email, d.personalGroupId),
-    );
+    return docs.map((d) => this.toDomain(d));
   }
 
-  private toDomain(
-    id: string,
-    name: string,
-    email: string,
-    personalGroupId?: string,
-  ): User {
+  private toDomain(doc: {
+    _id: string;
+    name: string;
+    email: string;
+    personalGroupId?: string;
+    passwordHash?: string | null;
+    avatarUrl?: string | null;
+    oauthProvider?: string | null;
+    oauthId?: string | null;
+  }): User {
     const result = User.create(
       {
-        name,
-        email,
-        ...(personalGroupId !== undefined ? { personalGroupId } : {}),
+        name: doc.name,
+        email: doc.email,
+        ...(doc.personalGroupId !== undefined ? { personalGroupId: doc.personalGroupId } : {}),
+        ...(doc.passwordHash !== undefined ? { passwordHash: doc.passwordHash } : {}),
+        ...(doc.avatarUrl !== undefined ? { avatarUrl: doc.avatarUrl } : {}),
+        ...(doc.oauthProvider !== undefined ? { oauthProvider: doc.oauthProvider } : {}),
+        ...(doc.oauthId !== undefined ? { oauthId: doc.oauthId } : {}),
       },
-      id,
+      doc._id,
     );
     if (result.isFailure) throw new Error(`User mapping failed: ${result.error}`);
     return result.getValue();

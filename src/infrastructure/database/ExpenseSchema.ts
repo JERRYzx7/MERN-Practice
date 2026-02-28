@@ -9,6 +9,7 @@ export interface IExpenseDocument extends Document<string> {
   _id: string;
   description: string;
   amount: number;
+  currency: string;
   payerId: string;
   groupId: string;
   splits: ISplitSubDoc[];
@@ -32,6 +33,7 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
     groupId: { type: String, required: true, index: true },
     splits: [SplitSubSchema],
     date: { type: Date, required: true },
+    currency: { type: String, required: true, default: "TWD" },
   },
   { _id: false, timestamps: true },
 );

@@ -12,6 +12,7 @@ function makeExpense(
   const result = Expense.create({
     description: "test",
     amount,
+    currency: "TWD",
     payerId,
     groupId: "group-1",
     splits: splits.map((s) => new Split(s)),

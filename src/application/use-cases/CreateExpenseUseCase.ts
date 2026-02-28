@@ -55,6 +55,7 @@ export class CreateExpenseUseCase {
     const expenseResult = Expense.create({
       description: request.description,
       amount: request.totalAmount,
+      currency: request.currency ?? "TWD",
       payerId: request.payerId,
       groupId: request.groupId,
       splits,
