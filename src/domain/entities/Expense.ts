@@ -15,6 +15,9 @@ export class Expense extends Entity<ExpenseProps> {
   get amount(): number {
     return this.props.amount;
   }
+  get payerId(): string {
+    return this.props.payerId;
+  }
   get splits(): Split[] {
     return this.props.splits;
   }
