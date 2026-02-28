@@ -42,6 +42,8 @@ export class CreateExpenseUseCase {
             request.totalAmount,
             request.exactMap,
           );
+        default:
+          return Result.fail(`Unknown splitType: ${(request as { splitType: string }).splitType}`);
       }
     })();
 
