@@ -1,5 +1,6 @@
 import { Result } from "@shared/core/Result.js";
 import { Expense } from "@domain/entities/Expense.js";
+import { Split } from "@domain/entities/Split.js";
 import type { IExpenseRepository } from "@domain/repositories/IExpenseRepository.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
 import { SplitService } from "@domain/services/SplitService.js";
