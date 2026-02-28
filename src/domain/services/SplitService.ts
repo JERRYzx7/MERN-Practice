@@ -111,4 +111,26 @@ export class SplitService {
 
     return Result.ok<Split[]>(splits);
   }
+
+  /**
+   * 指定金額分帳邏輯
+   * @param totalAmount 總支出金額
+   * @param exactMap 使用者指定金額對應表 { userId: amount }
+   */
+  public static calculateExactSplits(
+    totalAmount: number,
+    exactMap: Record<string, number>,
+  ): Result<Split[]> {
+    const total = Object.values(exactMap).reduce((sum, a) => sum + a, 0);
+    const rounded = Math.round(total * 100) / 100;
+    if (Math.abs(rounded - totalAmount) > 0.011) {
+      return Result.fail<Split[]>(
+        `指定金額總和 (${rounded}) 不等於支出總額 (${totalAmount})`,
+      );
+    }
+    const splits = Object.entries(exactMap).map(
+      ([userId, amount]) => new Split({ userId, amount }),
+    );
+    return Result.ok<Split[]>(splits);
+  }
 }

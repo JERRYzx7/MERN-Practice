@@ -125,4 +125,56 @@ describe("SplitService 分帳邏輯鮮血測試", () => {
       expect(validationResult.isSuccess).toBe(true);
     });
   });
+
+  describe("指定金額分帳邏輯 (Exact Split)", () => {
+    it("當指定金額總和等於 totalAmount 時，應回傳正確 Split 陣列", () => {
+      const result = SplitService.calculateExactSplits(100, {
+        "user-A": 60,
+        "user-B": 40,
+      });
+
+      expect(result.isSuccess).toBe(true);
+      const splits = result.getValue();
+      expect(splits).toHaveLength(2);
+      expect(splits.find((s) => s.userId === "user-A")!.amount).toBe(60);
+      expect(splits.find((s) => s.userId === "user-B")!.amount).toBe(40);
+    });
+
+    it("當指定金額總和不等於 totalAmount 時，應回傳失敗", () => {
+      const result = SplitService.calculateExactSplits(100, {
+        "user-A": 60,
+        "user-B": 30, // 總和只有 90
+      });
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error).toContain("不等於支出總額");
+    });
+
+    it("浮點數邊界：33.34 + 33.33 + 33.33 = 100 應成功", () => {
+      const result = SplitService.calculateExactSplits(100, {
+        "user-A": 33.34,
+        "user-B": 33.33,
+        "user-C": 33.33,
+      });
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue()).toHaveLength(3);
+    });
+
+    it("指定金額結果應通過 validateBalance 驗證", () => {
+      const splitsResult = SplitService.calculateExactSplits(200, {
+        "user-A": 120,
+        "user-B": 80,
+      });
+
+      const payers = [{ userId: "user-A", amount: 200 }];
+      const validation = SplitService.validateBalance(
+        200,
+        payers,
+        splitsResult.getValue(),
+      );
+
+      expect(validation.isSuccess).toBe(true);
+    });
+  });
 });
