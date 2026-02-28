@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { groupApi } from "@/lib/api";
+import { groupApi, expenseApi } from "@/lib/api";
 import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelLoader, PixelEmpty } from "@/components/ui/PixelLoader";
@@ -10,15 +10,23 @@ import { AmountBadge } from "@/components/ui/PixelBadge";
 export default function DashboardPage() {
   const { userName, userId, personalGroupId } = useAuthStore();
 
-  // Get personal group balance
-  const { data: balanceData, isLoading } = useQuery({
+  // Personal group balance
+  const { data: balanceData, isLoading: balanceLoading } = useQuery({
     queryKey: ["balance", personalGroupId],
     queryFn: () => groupApi.getBalance(personalGroupId!),
     enabled: !!personalGroupId,
   });
 
+  // Recent personal expenses
+  const { data: expensesData, isLoading: expensesLoading } = useQuery({
+    queryKey: ["expenses", personalGroupId],
+    queryFn: () => expenseApi.getByGroup(personalGroupId!),
+    enabled: !!personalGroupId,
+  });
+
   const myBalance = balanceData?.data.netBalances[userId!] ?? 0;
-  const settlements = balanceData?.data.settlements ?? [];
+  const recentExpenses = (expensesData?.data ?? []).slice(-5).reverse();
+  const isLoading = balanceLoading || expensesLoading;
 
   return (
     <div className="space-y-6">
@@ -38,7 +46,7 @@ export default function DashboardPage() {
             <div className="mt-4 flex items-center gap-4">
               <div>
                 <p className="font-pixel text-pixel-xs text-pixel-muted mb-1">個人結餘</p>
-                {isLoading ? (
+                {balanceLoading ? (
                   <span className="font-vt text-vt-lg text-pixel-muted animate-blink">
                     計算中...
                   </span>
@@ -48,7 +56,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          {/* Decoration */}
           <div
             className="absolute right-4 top-4 text-5xl opacity-20 animate-float-pixel"
             aria-hidden="true"
@@ -73,7 +80,7 @@ export default function DashboardPage() {
               <span className="font-pixel text-[8px]">查看群組</span>
             </PixelButton>
           </Link>
-          <Link to="/groups">
+          <Link to={personalGroupId ? `/groups/${personalGroupId}/expense/new` : "/groups"}>
             <PixelButton variant="secondary" fullWidth className="h-16 flex-col gap-1">
               <span className="text-2xl" aria-hidden="true">＋</span>
               <span className="font-pixel text-[8px]">新增支出</span>
@@ -90,32 +97,44 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Settlements */}
-      {settlements.length > 0 && (
-        <section aria-labelledby="settlements-heading">
-          <PixelCard title="待結算" titleIcon="⚔">
+      {/* Recent personal expenses */}
+      <section aria-labelledby="recent-expenses-heading">
+        <h2
+          id="recent-expenses-heading"
+          className="font-pixel text-pixel-xs text-pixel-muted mb-3 uppercase"
+        >
+          最近支出
+        </h2>
+        {expensesLoading ? (
+          <PixelLoader text="載入支出記錄" />
+        ) : recentExpenses.length === 0 ? (
+          <PixelEmpty
+            icon="📒"
+            title="尚無支出記錄"
+            description="點擊「新增支出」開始記帳！"
+          />
+        ) : (
+          <PixelCard title="個人記帳本" titleIcon="📒">
             <ul className="space-y-3" role="list">
-              {settlements.slice(0, 5).map((s, i) => (
+              {recentExpenses.map((exp) => (
                 <li
-                  key={i}
+                  key={exp.id}
                   className="flex items-center justify-between py-2 border-b border-pixel-border last:border-0"
                 >
                   <span className="font-vt text-vt-base text-pixel-text">
-                    <span className="text-pixel-red">{s.from}</span>
-                    <span className="text-pixel-muted mx-2">→</span>
-                    <span className="text-pixel-green">{s.to}</span>
+                    {exp.description}
                   </span>
                   <span className="font-vt text-vt-lg text-pixel-gold font-bold">
-                    ${s.amount.toFixed(2)}
+                    {exp.currency} {exp.amount.toFixed(2)}
                   </span>
                 </li>
               ))}
             </ul>
           </PixelCard>
-        </section>
-      )}
+        )}
+      </section>
 
-      {!isLoading && settlements.length === 0 && (
+      {!isLoading && (
         <PixelEmpty
           icon="✨"
           title="帳目清晰！"

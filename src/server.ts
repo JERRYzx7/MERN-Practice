@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { connectDatabase } from "@infrastructure/database/connection.js";
 import { buildContainer } from "@infrastructure/di/container.js";
 import { createApp } from "@interfaces/app.js";

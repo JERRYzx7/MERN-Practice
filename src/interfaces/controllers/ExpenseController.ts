@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import type { CreateExpenseUseCase } from "@application/use-cases/CreateExpenseUseCase.js";
 import type { GetBalanceUseCase } from "@application/use-cases/GetBalanceUseCase.js";
+import type { GetExpensesUseCase } from "@application/use-cases/GetExpensesUseCase.js";
 
 const CreateExpenseSchema = z.discriminatedUnion("splitType", [
   z.object({
@@ -37,6 +38,7 @@ export class ExpenseController {
   constructor(
     private createExpenseUseCase: CreateExpenseUseCase,
     private getBalanceUseCase: GetBalanceUseCase,
+    private getExpensesUseCase: GetExpensesUseCase,
   ) {}
 
   createExpense = async (
@@ -61,6 +63,20 @@ export class ExpenseController {
     }
 
     res.status(201).json({ success: true });
+  };
+
+  getExpenses = async (
+    req: Request<{ groupId: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { groupId } = req.params;
+    if (!groupId) {
+      res.status(400).json({ success: false, error: "groupId is required" });
+      return;
+    }
+    const result = await this.getExpensesUseCase.execute(groupId);
+    res.status(200).json({ success: true, data: result.getValue() });
   };
 
   getBalance = async (

@@ -13,6 +13,12 @@ interface ExpenseProps {
 }
 
 export class Expense extends Entity<ExpenseProps> {
+  get description(): string {
+    return this.props.description;
+  }
+  get groupId(): string {
+    return this.props.groupId;
+  }
   get amount(): number {
     return this.props.amount;
   }

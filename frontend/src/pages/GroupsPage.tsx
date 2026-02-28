@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { groupApi, ApiError } from "@/lib/api";
 import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelInput } from "@/components/ui/PixelInput";
-import { PixelEmpty } from "@/components/ui/PixelLoader";
+import { PixelEmpty, PixelLoader } from "@/components/ui/PixelLoader";
 import { PixelBadge } from "@/components/ui/PixelBadge";
-import { useLocalGroups } from "@/hooks/useLocalGroups";
 
 export default function GroupsPage() {
   const { userId } = useAuthStore();
@@ -17,7 +16,14 @@ export default function GroupsPage() {
   const [error, setError] = useState("");
   const qc = useQueryClient();
 
-  const { groups, addGroup } = useLocalGroups();
+  const { data, isLoading } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => groupApi.getGroups(),
+    enabled: !!userId,
+  });
+
+  // Only show Team groups on this page; Personal group is the Dashboard
+  const teamGroups = (data?.data ?? []).filter((g) => g.type === "Team");
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -26,8 +32,7 @@ export default function GroupsPage() {
         ownerId: userId!,
         memberIds: [userId!],
       }),
-    onSuccess: (res) => {
-      addGroup({ id: res.data.id, name: groupName.trim(), memberCount: 1 });
+    onSuccess: () => {
       setGroupName("");
       setShowForm(false);
       void qc.invalidateQueries({ queryKey: ["groups"] });
@@ -46,6 +51,8 @@ export default function GroupsPage() {
     }
     mutation.mutate();
   }
+
+  if (isLoading) return <PixelLoader />;
 
   return (
     <div className="space-y-6">
@@ -91,7 +98,7 @@ export default function GroupsPage() {
       )}
 
       {/* Groups list */}
-      {groups.length === 0 ? (
+      {teamGroups.length === 0 ? (
         <PixelEmpty
           icon="🏰"
           title="還沒有群組"
@@ -99,12 +106,12 @@ export default function GroupsPage() {
         />
       ) : (
         <ul className="space-y-3" role="list">
-          {groups.map((group) => (
+          {teamGroups.map((group) => (
             <li key={group.id}>
               <Link
                 to={`/groups/${group.id}`}
                 className="block border-2 border-pixel-border shadow-pixel bg-pixel-panel p-4 hover:border-pixel-gold hover:shadow-pixel-gold transition-all duration-75 hover:translate-x-[2px] hover:translate-y-[2px]"
-                aria-label={`群組：${group.name}，${group.memberCount} 名成員`}
+                aria-label={`群組：${group.name}，${group.memberIds.length} 名成員`}
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -112,7 +119,7 @@ export default function GroupsPage() {
                       {group.name}
                     </h2>
                     <PixelBadge variant="muted">
-                      {group.memberCount} 人
+                      {group.memberIds.length} 人
                     </PixelBadge>
                   </div>
                   <span className="text-2xl text-pixel-muted" aria-hidden="true">▶</span>

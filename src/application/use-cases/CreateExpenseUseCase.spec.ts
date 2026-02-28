@@ -14,6 +14,7 @@ describe("CreateExpenseUseCase", () => {
     // 建立 Mock Repositories
     mockGroupRepo = {
       findById: vi.fn(),
+      findByUserId: vi.fn(),
       isUserInGroup: vi.fn(),
       save: vi.fn(),
     };

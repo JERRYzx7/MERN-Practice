@@ -8,9 +8,11 @@ export function createGroupRouter(
 ): Router {
   const router = Router();
 
+  router.get("/", controller.getGroups);
   router.post("/", controller.createGroup);
   router.post("/:groupId/members", controller.addMember);
   router.get("/:groupId/balance", expenseController.getBalance);
+  router.get("/:groupId/expenses", expenseController.getExpenses);
 
   return router;
 }

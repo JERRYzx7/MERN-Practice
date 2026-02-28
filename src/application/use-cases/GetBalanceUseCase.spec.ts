@@ -30,6 +30,7 @@ describe("GetBalanceUseCase", () => {
   beforeEach(() => {
     mockGroupRepo = {
       findById: vi.fn(),
+      findByUserId: vi.fn(),
       isUserInGroup: vi.fn(),
       save: vi.fn(),
     };

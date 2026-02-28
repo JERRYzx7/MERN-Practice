@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { Group, GroupType } from "@domain/entities/Group.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
+import type { GetGroupsUseCase } from "@application/use-cases/GetGroupsUseCase.js";
 import { v4 as uuidv4 } from "uuid";
 
 const CreateGroupSchema = z.object({
@@ -15,9 +16,26 @@ const AddMemberSchema = z.object({
 });
 
 export class GroupController {
-  constructor(private groupRepo: IGroupRepository) {}
+  constructor(
+    private groupRepo: IGroupRepository,
+    private getGroupsUseCase: GetGroupsUseCase,
+  ) {}
 
-  createGroup = async (
+  getGroups = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+    const result = await this.getGroupsUseCase.execute(userId);
+    res.status(200).json({ success: true, data: result.getValue() });
+  };
+
+  createGroup= async (
     req: Request,
     res: Response,
     next: NextFunction,

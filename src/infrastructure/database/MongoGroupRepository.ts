@@ -9,6 +9,13 @@ export class MongoGroupRepository implements IGroupRepository {
     return this.toDomain(doc._id, doc.name, doc.type, doc.ownerId, doc.memberIds);
   }
 
+  async findByUserId(userId: string): Promise<Group[]> {
+    const docs = await GroupModel.find({ memberIds: userId }).lean();
+    return docs.map((doc) =>
+      this.toDomain(doc._id, doc.name, doc.type, doc.ownerId, doc.memberIds),
+    );
+  }
+
   async isUserInGroup(userId: string, groupId: string): Promise<boolean> {
     const count = await GroupModel.countDocuments({
       _id: groupId,

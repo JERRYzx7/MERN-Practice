@@ -1,6 +1,6 @@
 # SplitQuest API Documentation
 
-> **Base URL:** `http://localhost:3001/api`
+> **Base URL:** `http://localhost:3000/api`
 > **Auth:** Bearer Token（JWT）—— 除 `/users/register` 和 `/users/login` 外，所有端點均需 `Authorization: Bearer <token>` header。
 > **Content-Type:** `application/json`
 
@@ -122,6 +122,35 @@
 
 > ⚠️ 以下所有端點需要 `Authorization: Bearer <token>`
 
+### `GET /api/groups`
+
+> 取得當前登入用戶所屬的所有群組（含 Personal 和 Team）
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-v4",
+      "name": "我的帳本",
+      "type": "Personal",
+      "ownerId": "uuid-v4",
+      "memberIds": ["uuid-v4"]
+    },
+    {
+      "id": "uuid-v4-2",
+      "name": "東京旅遊",
+      "type": "Team",
+      "ownerId": "uuid-v4",
+      "memberIds": ["uuid-v4", "uuid-v4-3"]
+    }
+  ]
+}
+```
+
+---
+
 ### `POST /api/groups`
 
 > 建立新群組（Team 類型）
@@ -184,6 +213,33 @@
 | `401` | 未攜帶 token |
 | `404` | 群組不存在 |
 | `422` | 成員已在群組中 |
+
+---
+
+### `GET /api/groups/:groupId/expenses`
+
+> 取得某群組的所有支出記錄
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid-v4",
+      "groupId": "uuid-group",
+      "payerId": "uuid-payer",
+      "amount": 300,
+      "currency": "TWD",
+      "description": "晚餐",
+      "splits": [
+        { "userId": "uuid-v4", "amount": 150 },
+        { "userId": "uuid-v4-2", "amount": 150 }
+      ]
+    }
+  ]
+}
+```
 
 ---
 

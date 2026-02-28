@@ -97,7 +97,20 @@ export interface CreateGroupRequest {
   memberIds: string[];
 }
 
+export interface ExpenseRecord {
+  id: string;
+  groupId: string;
+  payerId: string;
+  amount: number;
+  currency: string;
+  description: string;
+  splits: { userId: string; amount: number }[];
+}
+
 export const groupApi = {
+  getGroups: () =>
+    request<{ success: true; data: Group[] }>("/groups"),
+
   create: (body: CreateGroupRequest) =>
     request<{ success: true; data: { id: string } }>("/groups", {
       method: "POST",
@@ -160,4 +173,7 @@ export const expenseApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  getByGroup: (groupId: string) =>
+    request<{ success: true; data: ExpenseRecord[] }>(`/groups/${groupId}/expenses`),
 };
