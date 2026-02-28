@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Custom Properties ─────────────────────────────── */
+:root {
+  --pixel-bg: #0a0e1a;
+  --pixel-panel: #1a1f35;
+  --pixel-card: #0d1117;
+  --pixel-border: #2a3054;
+  --pixel-gold: #fbbf24;
+  --pixel-cyan: #22d3ee;
+  --pixel-green: #4ade80;
+  --pixel-red: #f87171;
+  --pixel-text: #f0f0f0;
+  --pixel-muted: #8892a4;
+}
+
+/* ── Base Reset ─────────────────────────────────────────── */
+* {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--pixel-bg);
+  color: var(--pixel-text);
+  font-family: "VT323", monospace;
+  font-size: 20px;
+  line-height: 1.4;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* ── Skip to content (Accessibility) ───────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 8px 16px;
+  background: var(--pixel-gold);
+  color: #000;
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  z-index: 9999;
+  transition: top 0.1s;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* ── Pixel Cursor ───────────────────────────────────────── */
+@layer utilities {
+  .cursor-pixel {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect width='4' height='4' fill='%23fbbf24'/%3E%3C/svg%3E")
+        0 0,
+      pointer;
+  }
+}
+
+/* ── Pixel border utility ───────────────────────────────── */
+@layer components {
+  .pixel-border {
+    border: 2px solid var(--pixel-border);
+    box-shadow: 4px 4px 0px #000000;
+  }
+
+  .pixel-border-gold {
+    border: 2px solid var(--pixel-gold);
+    box-shadow: 4px 4px 0px #d97706;
+  }
+
+  .pixel-border-green {
+    border: 2px solid var(--pixel-green);
+    box-shadow: 4px 4px 0px #16a34a;
+  }
+
+  .pixel-border-red {
+    border: 2px solid var(--pixel-red);
+    box-shadow: 4px 4px 0px #dc2626;
+  }
+
+  /* Scanline overlay for retro CRT effect */
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.08) 2px,
+      rgba(0, 0, 0, 0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Pixel flicker animation */
+  .pixel-flicker {
+    animation: flicker 0.15s infinite;
+  }
+
+  /* Pixel text shadow */
+  .text-shadow-pixel {
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Loading dots */
+  .pixel-dots::after {
+    content: "";
+    animation: dots 1.5s steps(3, end) infinite;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--pixel-bg);
+    border-left: 2px solid var(--pixel-border);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--pixel-border);
+    border: 2px solid var(--pixel-bg);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--pixel-gold);
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────── */
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+/* ── Reduced Motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Focus styles (a11y) ────────────────────────────────── */
+:focus-visible {
+  outline: 3px solid var(--pixel-gold);
+  outline-offset: 2px;
+}

@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: splitquest_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      MONGO_INITDB_DATABASE: splitquest
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express:1.0.2
+    container_name: splitquest_mongo_express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USER:-root}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-password}
+      ME_CONFIG_MONGODB_URL: mongodb://root:password@mongo:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # redis:  # 預留 Redis slot
+  #   image: redis:7.2-alpine
+  #   container_name: splitquest_redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+
+volumes:
+  mongo_data:
+  # redis_data:

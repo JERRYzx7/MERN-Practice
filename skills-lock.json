@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "e2e-testing-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "2326461341dddc86472cea1a0cb19fe6c28dee1ba2daa69a723dc7564ac8bd09"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",

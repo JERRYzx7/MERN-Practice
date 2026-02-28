@@ -3,22 +3,8 @@ import { Expense } from "@domain/entities/Expense.js";
 import { Split } from "@domain/entities/Split.js";
 import type { IExpenseRepository } from "@domain/repositories/IExpenseRepository.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
-// import type { IUserRepository } from "@domain/repositories/IUserRepository.js";
 import { SplitService } from "@domain/services/SplitService.js";
-
-// 定義請求格式 (DTO)
-interface CreateExpenseRequest {
-  description: string;
-  totalAmount: number;
-  payerId: string;
-  groupId: string;
-  splitType: "EQUAL" | "PERCENTAGE" | "EXACT"; // 排除 SHARES (份數)
-  // 根據 splitType 傳入對應的數據
-  // EQUAL: 傳入 memberIds
-  // PERCENTAGE: 傳入 { "userId": percentage }
-  // EXACT: 傳入 { "userId": amount }
-  splitData: any;
-}
+import type { CreateExpenseDTO } from "@application/dtos/CreateExpenseDTO.js";
 
 export class CreateExpenseUseCase {
   constructor(
@@ -26,7 +12,7 @@ export class CreateExpenseUseCase {
     private expenseRepo: IExpenseRepository,
   ) {}
 
-  public async execute(request: CreateExpenseRequest): Promise<Result<void>> {
+  public async execute(request: CreateExpenseDTO): Promise<Result<void>> {
     // 1. 基本歸屬檢查
     const group = await this.groupRepo.findById(request.groupId);
     if (!group) return Result.fail("找不到該群組");
@@ -37,50 +23,42 @@ export class CreateExpenseUseCase {
     );
     if (!isPayerInGroup) return Result.fail("付款人不在該群組中");
 
-    // 2. 根據類型處理分帳邏輯 (除了份數以外的模式)
-    let splitsResult: Result<Split[]>;
-
-    switch (request.splitType) {
-      case "EQUAL":
-        // 平分模式：splitData 預期為 string[] (memberIds)
-        const equalSplits = SplitService.calculateEqualSplits(
-          request.totalAmount,
-          request.splitData,
-        );
-        splitsResult = Result.ok(equalSplits);
-        break;
-
-      case "PERCENTAGE":
-        // 百分比模式：splitData 預期為 Record<string, number>
-        splitsResult = SplitService.calculatePercentageSplits(
-          request.totalAmount,
-          request.splitData,
-        );
-        break;
-
-      case "EXACT":
-        // 指定金額模式：直接將數據轉為 Split 物件
-        const exactSplits = Object.keys(request.splitData).map(
-          (userId) => new Split({ userId, amount: request.splitData[userId] }),
-        );
-        splitsResult = Result.ok(exactSplits);
-        break;
-
-      default:
-        return Result.fail("未知的分帳類型");
-    }
+    // 2. 根據 splitType 分派到 SplitService
+    const splitsResult = (() => {
+      switch (request.splitType) {
+        case "EQUAL":
+          return Result.ok(
+            SplitService.calculateEqualSplits(
+              request.totalAmount,
+              request.memberIds,
+            ),
+          );
+        case "PERCENTAGE":
+          return SplitService.calculatePercentageSplits(
+            request.totalAmount,
+            request.percentageMap,
+          );
+        case "EXACT":
+          return SplitService.calculateExactSplits(
+            request.totalAmount,
+            request.exactMap,
+          );
+        default:
+          return Result.fail<Split[]>(`未知的分帳類型`);
+      }
+    })();
 
     if (splitsResult.isFailure) return Result.fail(splitsResult.error!);
     const splits = splitsResult.getValue();
 
-    // 3. 建立 Expense Entity (觸發三位一體驗證：A=B=C)
-    // 這裡我們假設 payer 只有一個，金額就是 totalAmount
+    // 3. 建立 Expense Entity (三位一體驗證：A=B=C)
     const expenseResult = Expense.create({
       description: request.description,
       amount: request.totalAmount,
+      currency: request.currency ?? "TWD",
       payerId: request.payerId,
       groupId: request.groupId,
-      splits: splits,
+      splits,
       date: new Date(),
     });
 
@@ -92,3 +70,4 @@ export class CreateExpenseUseCase {
     return Result.ok<void>();
   }
 }
+

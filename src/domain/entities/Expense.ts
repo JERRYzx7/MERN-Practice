@@ -5,6 +5,7 @@ import { Split } from "./Split.js";
 interface ExpenseProps {
   description: string;
   amount: number;
+  currency: string;
   payerId: string;
   groupId: string;
   splits: Split[];
@@ -12,8 +13,17 @@ interface ExpenseProps {
 }
 
 export class Expense extends Entity<ExpenseProps> {
+  get description(): string {
+    return this.props.description;
+  }
+  get groupId(): string {
+    return this.props.groupId;
+  }
   get amount(): number {
     return this.props.amount;
+  }
+  get currency(): string {
+    return this.props.currency;
   }
   get payerId(): string {
     return this.props.payerId;
