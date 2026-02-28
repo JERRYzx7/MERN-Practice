@@ -43,7 +43,7 @@ export class CreateExpenseUseCase {
             request.exactMap,
           );
         default:
-          return Result.fail(`Unknown splitType: ${(request as { splitType: string }).splitType}`);
+          return Result.fail<Split[]>(`Unknown splitType: ${(request as { splitType: string }).splitType}`);
       }
     })();
 
