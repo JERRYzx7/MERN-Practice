@@ -4,6 +4,7 @@ import type { IExpenseRepository } from "@domain/repositories/IExpenseRepository
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
 import { Expense } from "@domain/entities/Expense.js";
 import { Split } from "@domain/entities/Split.js";
+import { Payment } from "@domain/entities/Payment.js";
 import { Group, GroupType } from "@domain/entities/Group.js";
 
 function makeExpense(
@@ -14,10 +15,9 @@ function makeExpense(
 ): Expense {
   return Expense.create({
     description: "test",
-    amount,
     currency: "TWD",
-    payerId,
     groupId,
+    payments: [new Payment({ userId: payerId, amount })],
     splits: splits.map((s) => new Split(s)),
   }).getValue();
 }

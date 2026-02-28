@@ -97,14 +97,26 @@ export interface CreateGroupRequest {
   memberIds: string[];
 }
 
+export interface PaymentRecord {
+  userId: string;
+  amount: number;
+  note?: string;
+}
+
 export interface ExpenseRecord {
   id: string;
   groupId: string;
-  payerId: string;
+  payments: PaymentRecord[];
   amount: number;
   currency: string;
   description: string;
   splits: { userId: string; amount: number }[];
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  avatarUrl?: string;
 }
 
 export const groupApi = {
@@ -116,6 +128,9 @@ export const groupApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  getMembers: (groupId: string) =>
+    request<{ success: true; data: Member[] }>(`/groups/${groupId}/members`),
 
   addMember: (groupId: string, userId: string) =>
     request<{ success: true }>(`/groups/${groupId}/members`, {
@@ -141,27 +156,24 @@ export type SplitType = "EQUAL" | "PERCENTAGE" | "EXACT";
 export type CreateExpenseRequest =
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "EQUAL";
       memberIds: string[];
     }
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "PERCENTAGE";
       percentageMap: Record<string, number>;
     }
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "EXACT";
       exactMap: Record<string, number>;

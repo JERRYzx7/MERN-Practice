@@ -1,85 +1,153 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { expenseApi, ApiError } from "@/lib/api";
+import { expenseApi, ApiError, type PaymentRecord } from "@/lib/api";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { MemberAvatarPicker } from "@/components/ui/MemberAvatarPicker";
 import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelInput } from "@/components/ui/PixelInput";
 
 type SplitMode = "EQUAL" | "PERCENTAGE" | "EXACT";
 
-const SPLIT_MODE_LABELS: Record<SplitMode, { label: string; desc: string; icon: string }> = {
-  EQUAL: { label: "等額平分", desc: "所有人平均分攤", icon: "⊟" },
-  PERCENTAGE: { label: "百分比", desc: "自訂各人比例", icon: "%" },
-  EXACT: { label: "指定金額", desc: "直接輸入每人金額", icon: "$" },
+const SPLIT_MODE_LABELS: Record<SplitMode, { label: string; icon: string }> = {
+  EQUAL: { label: "等額平分", icon: "⊟" },
+  PERCENTAGE: { label: "百分比", icon: "%" },
+  EXACT: { label: "指定金額", icon: "$" },
 };
+
+interface PaymentRow {
+  userId: string;
+  amount: string;
+  note: string;
+}
 
 export default function AddExpensePage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { userId } = useAuthStore();
+  const { userId, personalGroupId } = useAuthStore();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const isPersonal = groupId === personalGroupId;
+  const { data: members = [] } = useGroupMembers(isPersonal ? undefined : groupId);
 
   const [description, setDescription] = useState("");
-  const [totalAmount, setTotalAmount] = useState("");
+  // Personal: single amount field
+  const [personalAmount, setPersonalAmount] = useState("");
+
+  // Group: payment rows (who paid how much)
+  const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([
+    { userId: userId ?? "", amount: "", note: "" },
+  ]);
+
+  // Group: who participates in the split
+  const [splitMembers, setSplitMembers] = useState<string[]>([userId ?? ""]);
   const [splitMode, setSplitMode] = useState<SplitMode>("EQUAL");
-  const [memberIds, setMemberIds] = useState(userId ?? "");
-  const [percentageInput, setPercentageInput] = useState("");
-  const [exactInput, setExactInput] = useState("");
+
+  // PERCENTAGE / EXACT raw maps (userId → value string)
+  const [percentageMap, setPercentageMap] = useState<Record<string, string>>({});
+  const [exactMap, setExactMap] = useState<Record<string, string>>({});
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
+  // ── helpers ──────────────────────────────────────────────
+
+  const totalPaid = paymentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+
+  function toggleSplitMember(id: string) {
+    setSplitMembers((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function updateRow(idx: number, field: keyof PaymentRow, value: string) {
+    setPaymentRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  }
+
+  function addRow() {
+    setPaymentRows((prev) => [...prev, { userId: "", amount: "", note: "" }]);
+  }
+
+  function removeRow(idx: number) {
+    setPaymentRows((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // ── validation ───────────────────────────────────────────
+
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!description.trim()) e["description"] = "請輸入描述";
+
+    if (isPersonal) {
+      const amt = parseFloat(personalAmount);
+      if (!personalAmount || isNaN(amt) || amt <= 0) e["amount"] = "請輸入正確金額";
+    } else {
+      paymentRows.forEach((r, i) => {
+        if (!r.userId) e[`pay-user-${i}`] = "請選擇付款人";
+        const amt = parseFloat(r.amount);
+        if (!r.amount || isNaN(amt) || amt <= 0) e[`pay-amt-${i}`] = "請輸入金額";
+      });
+      if (splitMembers.length === 0) e["splitMembers"] = "請選擇分攤成員";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  // ── mutation ─────────────────────────────────────────────
+
   const mutation = useMutation({
     mutationFn: () => {
-      const amount = parseFloat(totalAmount);
-      const base = {
-        description: description.trim(),
-        totalAmount: amount,
-        payerId: userId!,
-        groupId: groupId!,
-      };
+      const base = { description: description.trim(), groupId: groupId! };
+
+      if (isPersonal) {
+        const amt = parseFloat(personalAmount);
+        return expenseApi.create({
+          ...base,
+          payments: [{ userId: userId!, amount: amt }],
+          splitType: "EQUAL",
+          memberIds: [userId!],
+        });
+      }
+
+      const payments: PaymentRecord[] = paymentRows
+        .filter((r) => r.userId && parseFloat(r.amount) > 0)
+        .map((r) => ({
+          userId: r.userId,
+          amount: parseFloat(r.amount),
+          ...(r.note.trim() ? { note: r.note.trim() } : {}),
+        }));
 
       if (splitMode === "EQUAL") {
-        const ids = memberIds
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        return expenseApi.create({ ...base, splitType: "EQUAL", memberIds: ids });
+        return expenseApi.create({ ...base, payments, splitType: "EQUAL", memberIds: splitMembers });
       }
 
       if (splitMode === "PERCENTAGE") {
         const pct: Record<string, number> = {};
-        percentageInput.split(",").forEach((pair) => {
-          const [id, val] = pair.split(":").map((s) => s.trim());
-          if (id && val) pct[id] = parseFloat(val);
+        splitMembers.forEach((id) => {
+          const v = parseFloat(percentageMap[id] ?? "0");
+          if (v > 0) pct[id] = v;
         });
-        return expenseApi.create({ ...base, splitType: "PERCENTAGE", percentageMap: pct });
+        return expenseApi.create({ ...base, payments, splitType: "PERCENTAGE", percentageMap: pct });
       }
 
       // EXACT
       const exact: Record<string, number> = {};
-      exactInput.split(",").forEach((pair) => {
-        const [id, val] = pair.split(":").map((s) => s.trim());
-        if (id && val) exact[id] = parseFloat(val);
+      splitMembers.forEach((id) => {
+        const v = parseFloat(exactMap[id] ?? "0");
+        if (v > 0) exact[id] = v;
       });
-      return expenseApi.create({ ...base, splitType: "EXACT", exactMap: exact });
+      return expenseApi.create({ ...base, payments, splitType: "EXACT", exactMap: exact });
     },
     onSuccess: () => {
-      navigate(`/groups/${groupId}`);
+      void qc.invalidateQueries({ queryKey: ["expenses", groupId] });
+      navigate(isPersonal ? "/dashboard" : `/groups/${groupId}`);
     },
     onError: (err) => {
       if (err instanceof ApiError) setApiError(err.message);
     },
   });
-
-  function validate() {
-    const e: Record<string, string> = {};
-    if (!description.trim()) e["description"] = "請輸入描述";
-    const amt = parseFloat(totalAmount);
-    if (!totalAmount || isNaN(amt) || amt <= 0) e["totalAmount"] = "請輸入正確金額";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
 
   function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault();
@@ -87,110 +155,222 @@ export default function AddExpensePage() {
     if (validate()) mutation.mutate();
   }
 
+  const backTo = isPersonal ? "/dashboard" : `/groups/${groupId}`;
+
+  // ── render ────────────────────────────────────────────────
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link
-          to={`/groups/${groupId}`}
-          className="font-pixel text-pixel-xs text-pixel-muted hover:text-pixel-gold transition-colors"
-        >
+        <Link to={backTo} className="font-pixel text-pixel-xs text-pixel-muted hover:text-pixel-gold transition-colors">
           ◀ 返回
         </Link>
-        <h1 className="font-pixel text-pixel-sm text-pixel-gold">＋ 新增支出</h1>
+        <h1 className="font-pixel text-pixel-sm text-pixel-gold">
+          {isPersonal ? "📒 記帳" : "＋ 新增支出"}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} noValidate aria-label="新增支出表單">
         <div className="space-y-4">
-          {/* Basic info */}
+
+          {/* Description */}
           <PixelCard title="支出資訊" titleIcon="💰">
-            <div className="space-y-4">
+            <PixelInput
+              label="描述"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              error={errors["description"]}
+              placeholder={isPersonal ? "咖啡、午餐、交通..." : "晚餐、機票、住宿..."}
+              required
+              autoFocus
+            />
+          </PixelCard>
+
+          {/* ── Personal: simple amount ── */}
+          {isPersonal && (
+            <PixelCard title="金額" titleIcon="💴">
               <PixelInput
-                label="描述"
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                error={errors["description"]}
-                placeholder="晚餐、機票..."
-                required
-              />
-              <PixelInput
-                label="金額"
+                label="金額（TWD）"
                 type="number"
-                value={totalAmount}
-                onChange={(e) => setTotalAmount(e.target.value)}
-                error={errors["totalAmount"]}
+                value={personalAmount}
+                onChange={(e) => setPersonalAmount(e.target.value)}
+                error={errors["amount"]}
                 placeholder="0.00"
                 min="0.01"
                 step="0.01"
                 required
               />
-            </div>
-          </PixelCard>
+            </PixelCard>
+          )}
 
-          {/* Split mode selector */}
-          <PixelCard title="分帳模式" titleIcon="⚖">
-            <fieldset>
-              <legend className="sr-only">選擇分帳模式</legend>
-              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="分帳模式">
-                {(Object.keys(SPLIT_MODE_LABELS) as SplitMode[]).map((mode) => {
-                  const m = SPLIT_MODE_LABELS[mode];
-                  const isSelected = splitMode === mode;
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      onClick={() => setSplitMode(mode)}
-                      className={`border-2 p-3 text-center transition-all duration-75 ${
-                        isSelected
-                          ? "border-pixel-gold shadow-pixel-gold text-pixel-gold bg-pixel-gold/10 translate-x-[2px] translate-y-[2px]"
-                          : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
-                      }`}
-                    >
-                      <div className="font-vt text-vt-xl mb-1" aria-hidden="true">
-                        {m.icon}
+          {/* ── Group: payment rows ── */}
+          {!isPersonal && (
+            <>
+              <PixelCard title="付款人" titleIcon="💳">
+                <div className="space-y-3">
+                  {paymentRows.map((row, idx) => (
+                    <div key={idx} className="space-y-2 border border-pixel-border p-3">
+                      {/* Payer picker */}
+                      <MemberAvatarPicker
+                        members={members}
+                        selected={row.userId ? [row.userId] : []}
+                        onToggle={(id) => updateRow(idx, "userId", row.userId === id ? "" : id)}
+                        label={`付款人 ${idx + 1}`}
+                      />
+                      {errors[`pay-user-${idx}`] && (
+                        <p className="font-vt text-vt-xs text-pixel-red">{errors[`pay-user-${idx}`]}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <PixelInput
+                            label="金額"
+                            type="number"
+                            value={row.amount}
+                            onChange={(e) => updateRow(idx, "amount", e.target.value)}
+                            error={errors[`pay-amt-${idx}`]}
+                            placeholder="0.00"
+                            min="0.01"
+                            step="0.01"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <PixelInput
+                            label="備註（選填）"
+                            type="text"
+                            value={row.note}
+                            onChange={(e) => updateRow(idx, "note", e.target.value)}
+                            placeholder="飲料、餐點..."
+                          />
+                        </div>
+                        {paymentRows.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeRow(idx)}
+                            className="self-end mb-1 font-pixel text-pixel-xs text-pixel-red hover:opacity-70 px-2"
+                            aria-label="移除此付款"
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
-                      <div className="font-pixel text-[8px] leading-tight">{m.label}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+                    </div>
+                  ))}
 
-            <div className="mt-4">
-              {splitMode === "EQUAL" && (
-                <PixelInput
-                  label="成員 ID（逗號分隔）"
-                  type="text"
-                  value={memberIds}
-                  onChange={(e) => setMemberIds(e.target.value)}
-                  hint={`例：${userId},member-id-2`}
-                  placeholder="id1, id2, id3..."
+                  <PixelButton type="button" variant="secondary" size="sm" onClick={addRow}>
+                    ＋ 新增付款項目
+                  </PixelButton>
+
+                  {totalPaid > 0 && (
+                    <p className="font-pixel text-pixel-xs text-pixel-gold text-right">
+                      付款總計：${totalPaid.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </PixelCard>
+
+              {/* Split members */}
+              <PixelCard title="分攤成員" titleIcon="👥">
+                <MemberAvatarPicker
+                  members={members}
+                  selected={splitMembers}
+                  onToggle={toggleSplitMember}
+                  label="選擇分攤成員"
                 />
-              )}
-              {splitMode === "PERCENTAGE" && (
-                <PixelInput
-                  label="百分比（id:百分比，逗號分隔）"
-                  type="text"
-                  value={percentageInput}
-                  onChange={(e) => setPercentageInput(e.target.value)}
-                  hint={`例：${userId}:60,member-id:40`}
-                  placeholder="id1:60, id2:40"
-                />
-              )}
-              {splitMode === "EXACT" && (
-                <PixelInput
-                  label="金額（id:金額，逗號分隔）"
-                  type="text"
-                  value={exactInput}
-                  onChange={(e) => setExactInput(e.target.value)}
-                  hint={`例：${userId}:50,member-id:25`}
-                  placeholder="id1:50, id2:25"
-                />
-              )}
-            </div>
-          </PixelCard>
+                {errors["splitMembers"] && (
+                  <p className="font-vt text-vt-xs text-pixel-red mt-2">{errors["splitMembers"]}</p>
+                )}
+              </PixelCard>
+
+              {/* Split mode */}
+              <PixelCard title="分帳模式" titleIcon="⚖">
+                <div className="grid grid-cols-3 gap-2 mb-4" role="radiogroup" aria-label="分帳模式">
+                  {(Object.keys(SPLIT_MODE_LABELS) as SplitMode[]).map((mode) => {
+                    const m = SPLIT_MODE_LABELS[mode];
+                    const isSelected = splitMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSplitMode(mode)}
+                        className={`border-2 p-3 text-center transition-all duration-75 ${
+                          isSelected
+                            ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
+                            : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                        }`}
+                      >
+                        <div className="font-vt text-vt-xl mb-1">{m.icon}</div>
+                        <div className="font-pixel text-[8px]">{m.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* PERCENTAGE: per-member % input */}
+                {splitMode === "PERCENTAGE" && splitMembers.length > 0 && (
+                  <div className="space-y-2">
+                    {splitMembers.map((id) => {
+                      const member = members.find((m) => m.id === id);
+                      return (
+                        <div key={id} className="flex items-center gap-2">
+                          <span className="font-pixel text-pixel-xs text-pixel-muted w-24 truncate">
+                            {member?.name ?? id.slice(0, 8)}
+                          </span>
+                          <PixelInput
+                            label=""
+                            type="number"
+                            value={percentageMap[id] ?? ""}
+                            onChange={(e) =>
+                              setPercentageMap((prev) => ({ ...prev, [id]: e.target.value }))
+                            }
+                            placeholder="%"
+                            min="0"
+                            max="100"
+                          />
+                          <span className="font-vt text-vt-sm text-pixel-muted">%</span>
+                        </div>
+                      );
+                    })}
+                    <p className="font-pixel text-pixel-xs text-pixel-muted text-right">
+                      總計：{splitMembers.reduce((s, id) => s + (parseFloat(percentageMap[id] ?? "0") || 0), 0)}%
+                    </p>
+                  </div>
+                )}
+
+                {/* EXACT: per-member amount input */}
+                {splitMode === "EXACT" && splitMembers.length > 0 && (
+                  <div className="space-y-2">
+                    {splitMembers.map((id) => {
+                      const member = members.find((m) => m.id === id);
+                      return (
+                        <div key={id} className="flex items-center gap-2">
+                          <span className="font-pixel text-pixel-xs text-pixel-muted w-24 truncate">
+                            {member?.name ?? id.slice(0, 8)}
+                          </span>
+                          <PixelInput
+                            label=""
+                            type="number"
+                            value={exactMap[id] ?? ""}
+                            onChange={(e) =>
+                              setExactMap((prev) => ({ ...prev, [id]: e.target.value }))
+                            }
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      );
+                    })}
+                    <p className="font-pixel text-pixel-xs text-pixel-muted text-right">
+                      總計：${splitMembers.reduce((s, id) => s + (parseFloat(exactMap[id] ?? "0") || 0), 0).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </PixelCard>
+            </>
+          )}
 
           {apiError && (
             <p role="alert" className="font-vt text-vt-sm text-pixel-red border-2 border-pixel-red p-3">
@@ -198,17 +378,11 @@ export default function AddExpensePage() {
             </p>
           )}
 
-          <PixelButton
-            type="submit"
-            variant="primary"
-            size="lg"
-            fullWidth
-            loading={mutation.isPending}
-          >
-            ▶ 確認記帳
+          <PixelButton type="submit" variant="primary" size="lg" fullWidth loading={mutation.isPending}>
+            {isPersonal ? "▶ 記帳" : "▶ 確認記帳"}
           </PixelButton>
         </div>
       </form>
     </div>
   );
-}
+}

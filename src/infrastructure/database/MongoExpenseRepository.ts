@@ -1,6 +1,7 @@
 import type { IExpenseRepository } from "@domain/repositories/IExpenseRepository.js";
 import { Expense } from "@domain/entities/Expense.js";
 import { Split } from "@domain/entities/Split.js";
+import { Payment } from "@domain/entities/Payment.js";
 import { ExpenseModel } from "./ExpenseSchema.js";
 
 export class MongoExpenseRepository implements IExpenseRepository {
@@ -10,10 +11,13 @@ export class MongoExpenseRepository implements IExpenseRepository {
       {
         _id: expense.id,
         description: expense.props.description,
-        amount: expense.amount,
         currency: expense.props.currency,
-        payerId: expense.payerId,
         groupId: expense.props.groupId,
+        payments: expense.payments.map((p) => ({
+          userId: p.userId,
+          amount: p.amount,
+          ...(p.note !== undefined ? { note: p.note } : {}),
+        })),
         splits: expense.splits.map((s) => ({
           userId: s.userId,
           amount: s.amount,
@@ -38,24 +42,30 @@ export class MongoExpenseRepository implements IExpenseRepository {
   private toDomain(doc: {
     _id: string;
     description: string;
-    amount: number;
     currency: string;
-    payerId: string;
     groupId: string;
+    payments: Array<{ userId: string; amount: number; note?: string }>;
     splits: Array<{ userId: string; amount: number }>;
     date: Date;
   }): Expense {
-    const splitEntities = doc.splits.map(
+    const payments = doc.payments.map(
+      (p) =>
+        new Payment({
+          userId: p.userId,
+          amount: p.amount,
+          ...(p.note !== undefined ? { note: p.note } : {}),
+        }),
+    );
+    const splits = doc.splits.map(
       (s) => new Split({ userId: s.userId, amount: s.amount }),
     );
     const result = Expense.create(
       {
         description: doc.description,
-        amount: doc.amount,
         currency: doc.currency,
-        payerId: doc.payerId,
         groupId: doc.groupId,
-        splits: splitEntities,
+        payments,
+        splits,
         date: doc.date,
       },
       doc._id,

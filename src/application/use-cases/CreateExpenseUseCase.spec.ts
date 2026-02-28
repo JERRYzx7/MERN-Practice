@@ -48,8 +48,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "午餐",
-        totalAmount: 300,
-        payerId: payerId,
+        payments: [{ userId: payerId, amount: 300 }],
         groupId: groupId,
         splitType: "EQUAL" as const,
         memberIds: memberIds,
@@ -93,8 +92,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "專案獎金",
-        totalAmount: 1000,
-        payerId: payerId,
+        payments: [{ userId: payerId, amount: 1000 }],
         groupId: groupId,
         splitType: "PERCENTAGE" as const,
         percentageMap: {
@@ -134,8 +132,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "共同採購",
-        totalAmount: 500,
-        payerId: payerId,
+        payments: [{ userId: payerId, amount: 500 }],
         groupId: groupId,
         splitType: "EXACT" as const,
         exactMap: {
@@ -167,8 +164,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "午餐",
-        totalAmount: 300,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 300 }],
         groupId: "non-existent-group",
         splitType: "EQUAL" as const,
         memberIds: ["user-1"],
@@ -197,8 +193,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "午餐",
-        totalAmount: 300,
-        payerId: "user-999",
+        payments: [{ userId: "user-999", amount: 300 }],
         groupId: "group-123",
         splitType: "EQUAL" as const,
         memberIds: ["user-1", "user-2"],
@@ -232,8 +227,7 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "測試",
-        totalAmount: 1000,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 1000 }],
         groupId: "group-123",
         splitType: "PERCENTAGE" as const,
         percentageMap: {
@@ -256,8 +250,7 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "測試",
-        totalAmount: 500,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 500 }],
         groupId: "group-123",
         splitType: "EXACT" as const,
         exactMap: {
@@ -293,8 +286,7 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "",
-        totalAmount: 100,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 100 }],
         groupId: "group-123",
         splitType: "EQUAL" as const,
         memberIds: ["user-1"],
@@ -313,8 +305,7 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "測試",
-        totalAmount: 0,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 0 }],
         groupId: "group-123",
         splitType: "EQUAL" as const,
         memberIds: ["user-1"],
@@ -348,8 +339,7 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "個人午餐",
-        totalAmount: 100,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 100 }],
         groupId: "group-123",
         splitType: "EQUAL" as const,
         memberIds: ["user-1"],
@@ -378,8 +368,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "測試餘數",
-        totalAmount: 100,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 100 }],
         groupId: "group-123",
         splitType: "EQUAL" as const,
         memberIds: ["user-1", "user-2", "user-3"],
@@ -421,8 +410,7 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "測試",
-        totalAmount: 100,
-        payerId: "user-1",
+        payments: [{ userId: "user-1", amount: 100 }],
         groupId: "group-123",
         splitType: "UNKNOWN" as any,
         memberIds: [],

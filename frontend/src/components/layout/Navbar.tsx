@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { clsx } from "clsx";
 
@@ -23,12 +23,12 @@ export default function Navbar() {
         className="hidden md:flex items-center justify-between px-6 py-3 bg-pixel-panel border-b-2 border-pixel-border"
         role="banner"
       >
-        <div className="flex items-center gap-3">
+        <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <span className="text-2xl" aria-hidden="true">⚔</span>
           <span className="font-pixel text-pixel-sm text-pixel-gold text-shadow-pixel">
             SplitQuest
           </span>
-        </div>
+        </Link>
 
         <nav aria-label="主導覽">
           <ul className="flex items-center gap-1" role="list">
@@ -72,12 +72,12 @@ export default function Navbar() {
         className="flex md:hidden items-center justify-between px-4 py-3 bg-pixel-panel border-b-2 border-pixel-border"
         role="banner"
       >
-        <div className="flex items-center gap-2">
+        <Link to="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <span className="text-xl" aria-hidden="true">⚔</span>
           <span className="font-pixel text-pixel-xs text-pixel-gold">
             SplitQuest
           </span>
-        </div>
+        </Link>
         <span className="font-vt text-vt-sm text-pixel-muted">
           {userName ?? "冒險者"}
         </span>

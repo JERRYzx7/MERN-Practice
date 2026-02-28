@@ -1,5 +1,11 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
+interface IPaymentSubDoc {
+  userId: string;
+  amount: number;
+  note?: string;
+}
+
 interface ISplitSubDoc {
   userId: string;
   amount: number;
@@ -8,13 +14,21 @@ interface ISplitSubDoc {
 export interface IExpenseDocument extends Document<string> {
   _id: string;
   description: string;
-  amount: number;
   currency: string;
-  payerId: string;
   groupId: string;
+  payments: IPaymentSubDoc[];
   splits: ISplitSubDoc[];
   date: Date;
 }
+
+const PaymentSubSchema = new Schema<IPaymentSubDoc>(
+  {
+    userId: { type: String, required: true },
+    amount: { type: Number, required: true },
+    note: { type: String },
+  },
+  { _id: false },
+);
 
 const SplitSubSchema = new Schema<ISplitSubDoc>(
   {
@@ -28,12 +42,11 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
   {
     _id: { type: String, required: true },
     description: { type: String, required: true },
-    amount: { type: Number, required: true },
-    payerId: { type: String, required: true },
+    currency: { type: String, required: true, default: "TWD" },
     groupId: { type: String, required: true, index: true },
+    payments: [PaymentSubSchema],
     splits: [SplitSubSchema],
     date: { type: Date, required: true },
-    currency: { type: String, required: true, default: "TWD" },
   },
   { _id: false, timestamps: true },
 );

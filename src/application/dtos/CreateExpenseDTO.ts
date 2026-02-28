@@ -18,11 +18,17 @@ interface ExactSplitDTO {
 
 type SplitDataDTO = EqualSplitDTO | PercentageSplitDTO | ExactSplitDTO;
 
+export interface PaymentDTO {
+  userId: string;
+  amount: number;
+  note?: string | undefined;
+}
+
 /** 建立支出的輸入 DTO（discriminated union 確保型別安全） */
 export type CreateExpenseDTO = {
   description: string;
-  totalAmount: number;
   currency?: string;
-  payerId: string;
+  /** 多付款人；totalAmount = sum(payments.map(p => p.amount)) */
+  payments: PaymentDTO[];
   groupId: string;
 } & SplitDataDTO;

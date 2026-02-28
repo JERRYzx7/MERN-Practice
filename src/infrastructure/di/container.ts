@@ -7,6 +7,7 @@ import { CreateExpenseUseCase } from "@application/use-cases/CreateExpenseUseCas
 import { GetBalanceUseCase } from "@application/use-cases/GetBalanceUseCase.js";
 import { GetGroupsUseCase } from "@application/use-cases/GetGroupsUseCase.js";
 import { GetExpensesUseCase } from "@application/use-cases/GetExpensesUseCase.js";
+import { GetGroupMembersUseCase } from "@application/use-cases/GetGroupMembersUseCase.js";
 import { ExpenseController } from "@interfaces/controllers/ExpenseController.js";
 import { GroupController } from "@interfaces/controllers/GroupController.js";
 import { UserController } from "@interfaces/controllers/UserController.js";
@@ -37,10 +38,11 @@ export function buildContainer(): AppContainer {
   const getBalanceUseCase = new GetBalanceUseCase(groupRepo, expenseRepo);
   const getGroupsUseCase = new GetGroupsUseCase(groupRepo);
   const getExpensesUseCase = new GetExpensesUseCase(expenseRepo);
+  const getGroupMembersUseCase = new GetGroupMembersUseCase(groupRepo, userRepo);
 
   // Interface Controllers
   const expenseController = new ExpenseController(createExpenseUseCase, getBalanceUseCase, getExpensesUseCase);
-  const groupController = new GroupController(groupRepo, getGroupsUseCase);
+  const groupController = new GroupController(groupRepo, getGroupsUseCase, getGroupMembersUseCase);
   const userController = new UserController(userRepo, groupRepo, passwordService, jwtService);
 
   return { expenseController, groupController, userController, jwtService };
