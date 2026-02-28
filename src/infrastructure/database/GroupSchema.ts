@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
-export interface IGroupDocument extends Document {
+export interface IGroupDocument extends Document<string> {
   _id: string;
   name: string;
   type: "Personal" | "Team";

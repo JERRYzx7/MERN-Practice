@@ -50,7 +50,7 @@ export class GroupController {
   };
 
   addMember = async (
-    req: Request,
+    req: Request<{ groupId: string }>,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {

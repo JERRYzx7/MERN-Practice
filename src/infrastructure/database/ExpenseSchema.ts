@@ -5,7 +5,7 @@ interface ISplitSubDoc {
   amount: number;
 }
 
-export interface IExpenseDocument extends Document {
+export interface IExpenseDocument extends Document<string> {
   _id: string;
   description: string;
   amount: number;
