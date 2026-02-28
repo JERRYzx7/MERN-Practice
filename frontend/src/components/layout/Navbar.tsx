@@ -54,9 +54,9 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <span className="font-vt text-vt-base text-pixel-muted">
+          <Link to="/profile" className="font-vt text-vt-base text-pixel-muted hover:text-pixel-gold transition-colors">
             ▶ {userName ?? "冒險者"}
-          </span>
+          </Link>
           <button
             onClick={handleLogout}
             className="font-pixel text-pixel-xs border-2 border-pixel-border px-3 py-2 text-pixel-muted hover:border-pixel-red hover:text-pixel-red transition-colors"
@@ -78,9 +78,9 @@ export default function Navbar() {
             SplitQuest
           </span>
         </Link>
-        <span className="font-vt text-vt-sm text-pixel-muted">
+        <Link to="/profile" className="font-vt text-vt-sm text-pixel-muted hover:text-pixel-gold transition-colors">
           {userName ?? "冒險者"}
-        </span>
+        </Link>
       </header>
 
       {/* ── Mobile Bottom Nav ──────────────────────────── */}

@@ -50,4 +50,10 @@ export class User extends Entity<UserProps> {
   public setPersonalGroup(groupId: string): void {
     this.props.personalGroupId = groupId;
   }
+
+  public updateProfile(fields: { name?: string; avatarUrl?: string | null; passwordHash?: string }): void {
+    if (fields.name !== undefined) this.props.name = fields.name;
+    if (fields.avatarUrl !== undefined) this.props.avatarUrl = fields.avatarUrl;
+    if (fields.passwordHash !== undefined) this.props.passwordHash = fields.passwordHash;
+  }
 }

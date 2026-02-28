@@ -2,25 +2,27 @@ import { type InputHTMLAttributes, type TextareaHTMLAttributes, forwardRef } fro
 import { clsx } from "clsx";
 
 interface PixelInputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   error?: string;
   hint?: string;
 }
 
 export const PixelInput = forwardRef<HTMLInputElement, PixelInputProps>(
   ({ label, error, hint, id, className, ...props }, ref) => {
-    const inputId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+    const inputId = id ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
     const errorId = `${inputId}-error`;
     const hintId = `${inputId}-hint`;
 
     return (
       <div className="flex flex-col gap-2">
-        <label
-          htmlFor={inputId}
-          className="font-pixel text-pixel-xs text-pixel-gold uppercase tracking-wider"
-        >
-          {label}
-        </label>
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="font-pixel text-pixel-xs text-pixel-gold uppercase tracking-wider"
+          >
+            {label}
+          </label>
+        )}
         <input
           ref={ref}
           id={inputId}

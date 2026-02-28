@@ -79,6 +79,12 @@ export const userApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  updateProfile: (body: UpdateProfileRequest) =>
+    request<{ success: true; data: ProfileResponse }>("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };
 
 // ── Groups ────────────────────────────────────────────────
@@ -118,6 +124,22 @@ export interface Member {
   name: string;
   avatarUrl?: string;
 }
+
+export interface UpdateProfileRequest {
+  name?: string;
+  avatarUrl?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface ProfileResponse {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  personalGroupId?: string;
+}
+
 
 export const groupApi = {
   getGroups: () =>

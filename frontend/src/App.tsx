@@ -12,6 +12,7 @@ import GroupsPage from "@/pages/GroupsPage";
 import GroupDetailPage from "@/pages/GroupDetailPage";
 import AddExpensePage from "@/pages/AddExpensePage";
 import BalancePage from "@/pages/BalancePage";
+import ProfilePage from "@/pages/ProfilePage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const userId = useAuthStore((s) => s.userId);
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="groups/:groupId" element={<GroupDetailPage />} />
             <Route path="groups/:groupId/expense/new" element={<AddExpensePage />} />
             <Route path="groups/:groupId/balance" element={<BalancePage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
 
           {/* Fallback */}
