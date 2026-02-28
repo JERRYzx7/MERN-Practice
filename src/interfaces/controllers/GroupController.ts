@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Group, GroupType } from "@domain/entities/Group.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
 import type { GetGroupsUseCase } from "@application/use-cases/GetGroupsUseCase.js";
+import type { GetGroupMembersUseCase } from "@application/use-cases/GetGroupMembersUseCase.js";
 import { v4 as uuidv4 } from "uuid";
 
 const CreateGroupSchema = z.object({
@@ -19,6 +20,7 @@ export class GroupController {
   constructor(
     private groupRepo: IGroupRepository,
     private getGroupsUseCase: GetGroupsUseCase,
+    private getGroupMembersUseCase: GetGroupMembersUseCase,
   ) {}
 
   getGroups = async (
@@ -65,6 +67,24 @@ export class GroupController {
     await this.groupRepo.save(group);
 
     res.status(201).json({ success: true, data: { id: group.id } });
+  };
+
+  getMembers = async (
+    req: Request<{ groupId: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { groupId } = req.params;
+    if (!groupId) {
+      res.status(400).json({ success: false, error: "groupId is required" });
+      return;
+    }
+    const result = await this.getGroupMembersUseCase.execute(groupId);
+    if (result.isFailure) {
+      res.status(404).json({ success: false, error: result.error });
+      return;
+    }
+    res.status(200).json({ success: true, data: result.getValue() });
   };
 
   addMember = async (

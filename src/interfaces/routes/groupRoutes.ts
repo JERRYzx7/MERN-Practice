@@ -10,6 +10,7 @@ export function createGroupRouter(
 
   router.get("/", controller.getGroups);
   router.post("/", controller.createGroup);
+  router.get("/:groupId/members", controller.getMembers);
   router.post("/:groupId/members", controller.addMember);
   router.get("/:groupId/balance", expenseController.getBalance);
   router.get("/:groupId/expenses", expenseController.getExpenses);

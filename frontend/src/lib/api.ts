@@ -79,6 +79,12 @@ export const userApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  updateProfile: (body: UpdateProfileRequest) =>
+    request<{ success: true; data: ProfileResponse }>("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };
 
 // ── Groups ────────────────────────────────────────────────
@@ -97,15 +103,43 @@ export interface CreateGroupRequest {
   memberIds: string[];
 }
 
+export interface PaymentRecord {
+  userId: string;
+  amount: number;
+  note?: string;
+}
+
 export interface ExpenseRecord {
   id: string;
   groupId: string;
-  payerId: string;
+  payments: PaymentRecord[];
   amount: number;
   currency: string;
   description: string;
   splits: { userId: string; amount: number }[];
 }
+
+export interface Member {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  avatarUrl?: string | null;
+  currentPassword?: string;
+  newPassword?: string;
+}
+
+export interface ProfileResponse {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  personalGroupId?: string;
+}
+
 
 export const groupApi = {
   getGroups: () =>
@@ -116,6 +150,9 @@ export const groupApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  getMembers: (groupId: string) =>
+    request<{ success: true; data: Member[] }>(`/groups/${groupId}/members`),
 
   addMember: (groupId: string, userId: string) =>
     request<{ success: true }>(`/groups/${groupId}/members`, {
@@ -141,27 +178,24 @@ export type SplitType = "EQUAL" | "PERCENTAGE" | "EXACT";
 export type CreateExpenseRequest =
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "EQUAL";
       memberIds: string[];
     }
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "PERCENTAGE";
       percentageMap: Record<string, number>;
     }
   | {
       description: string;
-      totalAmount: number;
       currency?: string;
-      payerId: string;
+      payments: PaymentRecord[];
       groupId: string;
       splitType: "EXACT";
       exactMap: Record<string, number>;

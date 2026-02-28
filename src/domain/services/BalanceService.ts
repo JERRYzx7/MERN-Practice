@@ -36,9 +36,10 @@ export class BalanceService {
     const balances: Record<string, number> = {};
 
     for (const expense of expenses) {
-      // 付款者被欠錢，餘額增加
-      const payerId = expense.payerId;
-      balances[payerId] = (balances[payerId] ?? 0) + expense.amount;
+      // 每個付款人依其付款金額獲得債權
+      for (const payment of expense.payments) {
+        balances[payment.userId] = (balances[payment.userId] ?? 0) + payment.amount;
+      }
 
       // 分攤者欠錢，餘額減少
       for (const split of expense.splits) {

@@ -19,6 +19,13 @@ const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
+const UpdateMeSchema = z.object({
+  name: z.string().min(2).optional(),
+  avatarUrl: z.string().url().nullable().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(8).optional(),
+});
+
 export class UserController {
   constructor(
     private userRepo: IUserRepository,
@@ -119,6 +126,68 @@ export class UserController {
         name: user.name,
         personalGroupId: user.personalGroupId,
         token,
+      },
+    });
+  };
+
+  updateMe = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const userId = req.userId!;
+    const parsed = UpdateMeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    const { name, avatarUrl, currentPassword, newPassword } = parsed.data;
+
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      res.status(404).json({ success: false, error: "User not found" });
+      return;
+    }
+
+    // Password change: verify current password first
+    if (newPassword) {
+      if (!currentPassword) {
+        res.status(400).json({ success: false, error: "請輸入目前密碼" });
+        return;
+      }
+      if (!user.passwordHash) {
+        res.status(400).json({ success: false, error: "此帳號不支援密碼修改" });
+        return;
+      }
+      const valid = await this.passwordService.compare(currentPassword, user.passwordHash);
+      if (!valid) {
+        res.status(400).json({ success: false, error: "目前密碼不正確" });
+        return;
+      }
+      const newHash = await this.passwordService.hash(newPassword);
+      user.updateProfile({ passwordHash: newHash });
+    }
+
+    user.updateProfile({
+      ...(name !== undefined ? { name } : {}),
+      ...(avatarUrl !== undefined ? { avatarUrl } : {}),
+    });
+
+    await this.userRepo.save(user);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl ?? null,
+        personalGroupId: user.personalGroupId,
       },
     });
   };

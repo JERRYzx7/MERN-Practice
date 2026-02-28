@@ -187,6 +187,34 @@
 
 ---
 
+### `GET /api/groups/:groupId/members`
+
+> 取得群組內所有成員資訊
+
+**Path Params**
+| 參數 | 說明 |
+|------|------|
+| `groupId` | 群組 ID |
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "uuid-v4", "name": "Alice" },
+    { "id": "uuid-v4-2", "name": "Bob", "avatarUrl": "https://..." }
+  ]
+}
+```
+
+**Errors**
+| Status | 原因 |
+|--------|------|
+| `401` | 未攜帶 token |
+| `404` | 群組不存在 |
+
+---
+
 ### `POST /api/groups/:groupId/members`
 
 > 新增成員到群組

@@ -4,30 +4,35 @@ import type { CreateExpenseUseCase } from "@application/use-cases/CreateExpenseU
 import type { GetBalanceUseCase } from "@application/use-cases/GetBalanceUseCase.js";
 import type { GetExpensesUseCase } from "@application/use-cases/GetExpensesUseCase.js";
 
+const PaymentSchema = z.object({
+  userId: z.string().min(1),
+  amount: z.number().positive(),
+  note: z.string().optional(),
+});
+
+const paymentsField = z.array(PaymentSchema).min(1);
+
 const CreateExpenseSchema = z.discriminatedUnion("splitType", [
   z.object({
     description: z.string().min(1),
-    totalAmount: z.number().positive(),
     currency: z.string().default("TWD"),
-    payerId: z.string().min(1),
+    payments: paymentsField,
     groupId: z.string().min(1),
     splitType: z.literal("EQUAL"),
     memberIds: z.array(z.string()).min(1),
   }),
   z.object({
     description: z.string().min(1),
-    totalAmount: z.number().positive(),
     currency: z.string().default("TWD"),
-    payerId: z.string().min(1),
+    payments: paymentsField,
     groupId: z.string().min(1),
     splitType: z.literal("PERCENTAGE"),
     percentageMap: z.record(z.string(), z.number().positive()),
   }),
   z.object({
     description: z.string().min(1),
-    totalAmount: z.number().positive(),
     currency: z.string().default("TWD"),
-    payerId: z.string().min(1),
+    payments: paymentsField,
     groupId: z.string().min(1),
     splitType: z.literal("EXACT"),
     exactMap: z.record(z.string(), z.number().positive()),

@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { BalanceService } from "./BalanceService.js";
 import { Expense } from "@domain/entities/Expense.js";
 import { Split } from "@domain/entities/Split.js";
+import { Payment } from "@domain/entities/Payment.js";
 
-// Helper: 建立 Expense，已通過驗證
+// Helper: 建立 Expense（單付款人，向後相容）
 function makeExpense(
   amount: number,
   payerId: string,
@@ -11,10 +12,9 @@ function makeExpense(
 ): Expense {
   const result = Expense.create({
     description: "test",
-    amount,
     currency: "TWD",
-    payerId,
     groupId: "group-1",
+    payments: [new Payment({ userId: payerId, amount })],
     splits: splits.map((s) => new Split(s)),
   });
   if (result.isFailure) throw new Error(result.error ?? "建立失敗");

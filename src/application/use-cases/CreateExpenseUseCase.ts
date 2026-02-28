@@ -1,6 +1,7 @@
 import { Result } from "@shared/core/Result.js";
 import { Expense } from "@domain/entities/Expense.js";
 import { Split } from "@domain/entities/Split.js";
+import { Payment } from "@domain/entities/Payment.js";
 import type { IExpenseRepository } from "@domain/repositories/IExpenseRepository.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
 import { SplitService } from "@domain/services/SplitService.js";
@@ -17,30 +18,34 @@ export class CreateExpenseUseCase {
     const group = await this.groupRepo.findById(request.groupId);
     if (!group) return Result.fail("找不到該群組");
 
+    // Validate primary payer (first payment) is in the group
+    const primaryPayerId = request.payments[0]?.userId;
+    if (!primaryPayerId) return Result.fail("至少需要有一個付款項目");
+
     const isPayerInGroup = await this.groupRepo.isUserInGroup(
-      request.payerId,
+      primaryPayerId,
       request.groupId,
     );
     if (!isPayerInGroup) return Result.fail("付款人不在該群組中");
 
-    // 2. 根據 splitType 分派到 SplitService
+    // 2. Derive totalAmount from payments
+    const totalAmount = request.payments.reduce((sum, p) => sum + p.amount, 0);
+
+    // 3. 根據 splitType 分派到 SplitService
     const splitsResult = (() => {
       switch (request.splitType) {
         case "EQUAL":
           return Result.ok(
-            SplitService.calculateEqualSplits(
-              request.totalAmount,
-              request.memberIds,
-            ),
+            SplitService.calculateEqualSplits(totalAmount, request.memberIds),
           );
         case "PERCENTAGE":
           return SplitService.calculatePercentageSplits(
-            request.totalAmount,
+            totalAmount,
             request.percentageMap,
           );
         case "EXACT":
           return SplitService.calculateExactSplits(
-            request.totalAmount,
+            totalAmount,
             request.exactMap,
           );
         default:
@@ -51,20 +56,28 @@ export class CreateExpenseUseCase {
     if (splitsResult.isFailure) return Result.fail(splitsResult.error!);
     const splits = splitsResult.getValue();
 
-    // 3. 建立 Expense Entity (三位一體驗證：A=B=C)
+    // 4. 建立 Expense Entity
+    const payments = request.payments.map(
+      (p) =>
+        new Payment({
+          userId: p.userId,
+          amount: p.amount,
+          ...(p.note !== undefined ? { note: p.note } : {}),
+        }),
+    );
+
     const expenseResult = Expense.create({
       description: request.description,
-      amount: request.totalAmount,
       currency: request.currency ?? "TWD",
-      payerId: request.payerId,
       groupId: request.groupId,
+      payments,
       splits,
       date: new Date(),
     });
 
     if (expenseResult.isFailure) return Result.fail(expenseResult.error!);
 
-    // 4. 持久化
+    // 5. 持久化
     await this.expenseRepo.save(expenseResult.getValue());
 
     return Result.ok<void>();
