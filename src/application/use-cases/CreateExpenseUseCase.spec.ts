@@ -50,7 +50,7 @@ describe("CreateExpenseUseCase", () => {
         payerId: payerId,
         groupId: groupId,
         splitType: "EQUAL" as const,
-        splitData: memberIds,
+        memberIds: memberIds,
       };
 
       // Act
@@ -95,9 +95,9 @@ describe("CreateExpenseUseCase", () => {
         payerId: payerId,
         groupId: groupId,
         splitType: "PERCENTAGE" as const,
-        splitData: {
-          "user-1": 60, // 60%
-          "user-2": 40, // 40%
+        percentageMap: {
+          "user-1": 60,
+          "user-2": 40,
         },
       };
 
@@ -136,7 +136,7 @@ describe("CreateExpenseUseCase", () => {
         payerId: payerId,
         groupId: groupId,
         splitType: "EXACT" as const,
-        splitData: {
+        exactMap: {
           "user-1": 200,
           "user-2": 150,
           "user-3": 150,
@@ -169,7 +169,7 @@ describe("CreateExpenseUseCase", () => {
         payerId: "user-1",
         groupId: "non-existent-group",
         splitType: "EQUAL" as const,
-        splitData: ["user-1"],
+        memberIds: ["user-1"],
       };
 
       // Act
@@ -196,10 +196,10 @@ describe("CreateExpenseUseCase", () => {
       const request = {
         description: "午餐",
         totalAmount: 300,
-        payerId: "user-999", // 不在群組中的使用者
+        payerId: "user-999",
         groupId: "group-123",
         splitType: "EQUAL" as const,
-        splitData: ["user-1", "user-2"],
+        memberIds: ["user-1", "user-2"],
       };
 
       // Act
@@ -234,9 +234,9 @@ describe("CreateExpenseUseCase", () => {
         payerId: "user-1",
         groupId: "group-123",
         splitType: "PERCENTAGE" as const,
-        splitData: {
+        percentageMap: {
           "user-1": 60,
-          "user-2": 30, // 總和只有 90%
+          "user-2": 30,
         },
       };
 
@@ -258,9 +258,9 @@ describe("CreateExpenseUseCase", () => {
         payerId: "user-1",
         groupId: "group-123",
         splitType: "EXACT" as const,
-        splitData: {
+        exactMap: {
           "user-1": 200,
-          "user-2": 200, // 總和只有 400,不等於 500
+          "user-2": 200,
         },
       };
 
@@ -269,7 +269,7 @@ describe("CreateExpenseUseCase", () => {
 
       // Assert
       expect(result.isFailure).toBe(true);
-      expect(result.error).toContain("金額不符");
+      expect(result.error).toContain("不等於支出總額");
       expect(mockExpenseRepo.save).not.toHaveBeenCalled();
     });
   });
@@ -290,12 +290,12 @@ describe("CreateExpenseUseCase", () => {
     it("當支出描述為空時應該失敗", async () => {
       // Arrange
       const request = {
-        description: "", // 空描述
+        description: "",
         totalAmount: 100,
         payerId: "user-1",
         groupId: "group-123",
         splitType: "EQUAL" as const,
-        splitData: ["user-1"],
+        memberIds: ["user-1"],
       };
 
       // Act
@@ -311,11 +311,11 @@ describe("CreateExpenseUseCase", () => {
       // Arrange
       const request = {
         description: "測試",
-        totalAmount: 0, // 無效金額
+        totalAmount: 0,
         payerId: "user-1",
         groupId: "group-123",
         splitType: "EQUAL" as const,
-        splitData: ["user-1"],
+        memberIds: ["user-1"],
       };
 
       // Act
@@ -350,7 +350,7 @@ describe("CreateExpenseUseCase", () => {
         payerId: "user-1",
         groupId: "group-123",
         splitType: "EQUAL" as const,
-        splitData: ["user-1"],
+        memberIds: ["user-1"],
       };
 
       // Act
@@ -376,11 +376,11 @@ describe("CreateExpenseUseCase", () => {
 
       const request = {
         description: "測試餘數",
-        totalAmount: 100, // 100 / 3 = 33.33...
+        totalAmount: 100,
         payerId: "user-1",
         groupId: "group-123",
         splitType: "EQUAL" as const,
-        splitData: ["user-1", "user-2", "user-3"],
+        memberIds: ["user-1", "user-2", "user-3"],
       };
 
       // Act
@@ -422,8 +422,8 @@ describe("CreateExpenseUseCase", () => {
         totalAmount: 100,
         payerId: "user-1",
         groupId: "group-123",
-        splitType: "UNKNOWN" as any, // 未知類型
-        splitData: {},
+        splitType: "UNKNOWN" as any,
+        memberIds: [],
       };
 
       // Act
