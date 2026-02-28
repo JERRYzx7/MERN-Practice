@@ -44,7 +44,7 @@ export class CreateExpenseUseCase {
             request.exactMap,
           );
         default:
-          return Result.fail<Split[]>(`Unknown splitType: ${(request as { splitType: string }).splitType}`);
+          return Result.fail<Split[]>(`未知的分帳類型`);
       }
     })();
 
