@@ -18,7 +18,7 @@ export default function LoginPage() {
   const mutation = useMutation({
     mutationFn: () => userApi.login({ email: email.trim(), password }),
     onSuccess: (res) => {
-      login({ id: res.data.id, name: res.data.name, email: res.data.email, personalGroupId: res.data.personalGroupId, token: res.data.token });
+      login({ id: res.data.id, name: res.data.name, email: res.data.email, avatarUrl: res.data.avatarUrl, personalGroupId: res.data.personalGroupId, token: res.data.token, customCategories: res.data.customCategories });
       navigate("/dashboard");
     },
     onError: (err) => {

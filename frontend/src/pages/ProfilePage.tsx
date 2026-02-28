@@ -49,7 +49,7 @@ export default function ProfilePage() {
   const mutation = useMutation({
     mutationFn: userApi.updateProfile,
     onSuccess: (res) => {
-      updateUserInfo({ name: res.data.name, avatarUrl: res.data.avatarUrl });
+      updateUserInfo({ name: res.data.name, avatarUrl: res.data.avatarUrl, customCategories: res.data.customCategories });
       setSuccessMsg("✔ 更新成功！");
       setCurrentPassword("");
       setNewPassword("");

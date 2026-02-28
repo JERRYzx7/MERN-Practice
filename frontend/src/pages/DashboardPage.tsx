@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { groupApi, expenseApi } from "@/lib/api";
+import { expenseApi } from "@/lib/api";
 import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelLoader, PixelEmpty } from "@/components/ui/PixelLoader";
-import { AmountBadge } from "@/components/ui/PixelBadge";
 import type { ExpenseRecord } from "@/lib/api";
 
 const WEEKDAY = ["日", "一", "二", "三", "四", "五", "六"] as const;
@@ -34,23 +33,20 @@ function groupByDay(expenses: ExpenseRecord[]): Map<string, ExpenseRecord[]> {
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
+  // 支出
   餐飲: "🍽", 交通: "🚗", 住房: "🏠", 購物: "🛒", 娛樂: "🎮",
   醫療: "💊", 教育: "📚", 旅遊: "✈️", "3C": "💻", 禮物: "🎁", 工作: "💼", 運動: "🏋️",
+  // 收入
+  薪水: "💰", 獎金: "🎯", 股票: "📈", 副業: "💡", 租金: "🏡",
+  退款: "💳", 禮金: "🧧", 其他收入: "✨",
 };
 
 export default function DashboardPage() {
-  const { userName, userId, personalGroupId } = useAuthStore();
+  const { userName, personalGroupId } = useAuthStore();
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
   const [activeTab, setActiveTab] = useState<"ledger" | "chart">("ledger");
-
-  // Personal group balance
-  const { data: balanceData, isLoading: balanceLoading } = useQuery({
-    queryKey: ["balance", personalGroupId],
-    queryFn: () => groupApi.getBalance(personalGroupId!),
-    enabled: !!personalGroupId,
-  });
 
   // All personal expenses
   const { data: expensesData, isLoading: expensesLoading } = useQuery({
@@ -59,13 +55,14 @@ export default function DashboardPage() {
     enabled: !!personalGroupId,
   });
 
-  const myBalance = balanceData?.data.netBalances[userId!] ?? 0;
   const allExpenses = expensesData?.data ?? [];
 
   // Filter to selected month
   const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, "0")}`;
   const monthExpenses = allExpenses.filter((e) => toLocalDateStr(e.date).startsWith(monthPrefix));
-  const monthTotal = monthExpenses.reduce((s, e) => s + e.amount, 0);
+  const monthIncome  = monthExpenses.filter((e) => e.type === "INCOME").reduce((s, e) => s + e.amount, 0);
+  const monthSpend   = monthExpenses.filter((e) => e.type !== "INCOME").reduce((s, e) => s + e.amount, 0);
+  const monthNet     = monthIncome - monthSpend;   // positive = surplus, negative = deficit
   const grouped = groupByDay(monthExpenses);
 
   function prevMonth() {
@@ -91,16 +88,27 @@ export default function DashboardPage() {
               ▶ 歡迎回來，{userName ?? "冒險者"}！
             </h1>
             <p className="font-vt text-vt-base text-pixel-muted">今天要記帳了嗎？</p>
-            <div className="mt-4 flex items-center gap-4">
-              <div>
-                <p className="font-pixel text-pixel-xs text-pixel-muted mb-1">個人結餘</p>
-                {balanceLoading ? (
-                  <span className="font-vt text-vt-lg text-pixel-muted animate-blink">計算中...</span>
-                ) : (
-                  <AmountBadge amount={myBalance} />
-                )}
+              <div className="mt-4 flex items-center gap-6">
+                <div>
+                  <p className="font-pixel text-pixel-xs text-pixel-muted mb-1">本月結餘</p>
+                  {expensesLoading ? (
+                    <span className="font-vt text-vt-lg text-pixel-muted animate-blink">計算中...</span>
+                  ) : (
+                    <span className={`font-vt text-vt-lg ${monthNet >= 0 ? "text-green-400" : "text-red-400"}`}>
+                      {monthNet >= 0 ? "+" : ""}{monthNet.toFixed(0)}{" "}
+                      <span className="text-pixel-muted text-sm">TWD</span>
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className="font-pixel text-pixel-xs text-pixel-muted mb-1">收入</p>
+                  <span className="font-vt text-vt-base text-green-400">+{monthIncome.toFixed(0)}</span>
+                </div>
+                <div>
+                  <p className="font-pixel text-pixel-xs text-pixel-muted mb-1">支出</p>
+                  <span className="font-vt text-vt-base text-red-400">−{monthSpend.toFixed(0)}</span>
+                </div>
               </div>
-            </div>
           </div>
           <div className="absolute right-4 top-4 text-5xl opacity-20 animate-float-pixel" aria-hidden="true">💰</div>
         </div>
@@ -176,8 +184,8 @@ export default function DashboardPage() {
                       {formatMonth(viewYear, viewMonth)}
                     </span>
                     {monthExpenses.length > 0 && (
-                      <p className="font-vt text-vt-sm text-pixel-muted">
-                        本月總計 {monthTotal.toFixed(0)} TWD
+                      <p className={`font-vt text-vt-sm ${monthNet >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        結餘 {monthNet >= 0 ? "+" : ""}{monthNet.toFixed(0)} TWD
                       </p>
                     )}
                   </div>
@@ -196,7 +204,7 @@ export default function DashboardPage() {
                   <div className="space-y-4">
                     {[...grouped.entries()].map(([day, exps]) => {
                       const d = new Date(day + "T00:00:00");
-                      const dayTotal = exps.reduce((s, e) => s + e.amount, 0);
+                      const dayNet = exps.reduce((s, e) => s + (e.type === "INCOME" ? e.amount : -e.amount), 0);
                       const mm = String(d.getMonth() + 1).padStart(2, "0");
                       const dd = String(d.getDate()).padStart(2, "0");
                       const wd = WEEKDAY[d.getDay()];
@@ -207,25 +215,26 @@ export default function DashboardPage() {
                             <span className="font-pixel text-pixel-xs text-pixel-gold">
                               {mm}/{dd}（{wd}）
                             </span>
-                            <span className="font-vt text-vt-sm text-pixel-muted">
-                              −{dayTotal.toFixed(0)}
+                            <span className={`font-vt text-vt-sm ${dayNet >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              {dayNet >= 0 ? "+" : ""}{dayNet.toFixed(0)}
                             </span>
                           </div>
                           <PixelCard>
                             <ul className="divide-y divide-pixel-border" role="list">
                               {exps.map((exp) => {
-                                const icon = CATEGORY_ICONS[exp.category] ?? "💸";
+                                const isIncome = exp.type === "INCOME";
+                                const icon = CATEGORY_ICONS[exp.category] ?? (isIncome ? "✨" : "💸");
                                 return (
                                   <li key={exp.id} className="flex items-center gap-3 py-2">
                                     <span className="text-xl w-7 text-center flex-shrink-0" aria-hidden="true">{icon}</span>
                                     <div className="flex-1 min-w-0">
                                       <p className="font-vt text-vt-base text-pixel-text truncate">{exp.description}</p>
-                                      {exp.category && (
+                                      {exp.category && !isIncome && (
                                         <p className="font-pixel text-[7px] text-pixel-muted">{exp.category}</p>
                                       )}
                                     </div>
-                                    <span className="font-vt text-vt-base text-pixel-gold font-bold flex-shrink-0">
-                                      {exp.amount.toFixed(0)}
+                                    <span className={`font-vt text-vt-base font-bold flex-shrink-0 ${isIncome ? "text-green-400" : "text-red-400"}`}>
+                                      {isIncome ? "+" : "−"}{exp.amount.toFixed(0)}
                                     </span>
                                   </li>
                                 );

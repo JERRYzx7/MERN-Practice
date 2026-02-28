@@ -11,6 +11,7 @@ interface ExpenseProps {
   splits: Split[];
   date?: Date;
   category?: string;
+  type?: "EXPENSE" | "INCOME";
 }
 
 export class Expense extends Entity<ExpenseProps> {
@@ -44,6 +45,9 @@ export class Expense extends Entity<ExpenseProps> {
   }
   get category(): string {
     return this.props.category ?? "";
+  }
+  get type(): "EXPENSE" | "INCOME" {
+    return this.props.type ?? "EXPENSE";
   }
   private constructor(props: ExpenseProps, id?: string) {
     super(props, id);

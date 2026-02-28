@@ -19,6 +19,7 @@ const commonFields = {
   groupId: z.string().min(1),
   date: z.string().optional(),
   category: z.string().optional(),
+  type: z.enum(["EXPENSE", "INCOME"]).optional(),
 };
 
 const CreateExpenseSchema = z.discriminatedUnion("splitType", [

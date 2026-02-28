@@ -27,6 +27,7 @@ export class MongoUserRepository implements IUserRepository {
         avatarUrl: user.avatarUrl ?? null,
         oauthProvider: user.oauthProvider ?? null,
         oauthId: user.oauthId ?? null,
+        customCategories: user.customCategories,
       },
       { upsert: true, new: true },
     );
@@ -46,6 +47,7 @@ export class MongoUserRepository implements IUserRepository {
     avatarUrl?: string | null;
     oauthProvider?: string | null;
     oauthId?: string | null;
+    customCategories?: { expense: string[]; income: string[] };
   }): User {
     const result = User.create(
       {
@@ -56,6 +58,7 @@ export class MongoUserRepository implements IUserRepository {
         ...(doc.avatarUrl !== undefined ? { avatarUrl: doc.avatarUrl } : {}),
         ...(doc.oauthProvider !== undefined ? { oauthProvider: doc.oauthProvider } : {}),
         ...(doc.oauthId !== undefined ? { oauthId: doc.oauthId } : {}),
+        ...(doc.customCategories !== undefined ? { customCategories: doc.customCategories } : {}),
       },
       doc._id,
     );

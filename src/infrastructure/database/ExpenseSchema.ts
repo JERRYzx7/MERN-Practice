@@ -20,6 +20,7 @@ export interface IExpenseDocument extends Document<string> {
   splits: ISplitSubDoc[];
   date: Date;
   category: string;
+  type: string;
 }
 
 const PaymentSubSchema = new Schema<IPaymentSubDoc>(
@@ -49,6 +50,7 @@ const ExpenseSchema = new Schema<IExpenseDocument>(
     splits: [SplitSubSchema],
     date: { type: Date, required: true },
     category: { type: String, default: "" },
+    type: { type: String, default: "EXPENSE" },
   },
   { _id: false, timestamps: true },
 );

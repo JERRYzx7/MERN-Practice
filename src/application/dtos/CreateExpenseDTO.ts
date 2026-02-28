@@ -35,4 +35,6 @@ export type CreateExpenseDTO = {
   date?: string | undefined;
   /** 分類，選填 */
   category?: string | undefined;
+  /** 支出或收入，預設 EXPENSE */
+  type?: "EXPENSE" | "INCOME" | undefined;
 } & SplitDataDTO;

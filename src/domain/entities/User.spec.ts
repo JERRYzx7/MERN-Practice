@@ -28,6 +28,21 @@ describe("User Entity (領域實體測試)", () => {
     expect(result.error).toBe("Invalid email address.");
   });
 
+  it("新建立的 User，customCategories 預設為 { expense: [], income: [] }", () => {
+    const result = User.create({ name: "小明", email: "ming@example.com" });
+
+    expect(result.isSuccess).toBe(true);
+    expect(result.getValue().customCategories).toEqual({ expense: [], income: [] });
+  });
+
+  it("updateCustomCategories 後 getter 回傳更新後的值", () => {
+    const user = User.create({ name: "小明", email: "ming@example.com" }).getValue();
+
+    user.updateCustomCategories({ expense: ["飲料", "零食"], income: ["獎金"] });
+
+    expect(user.customCategories).toEqual({ expense: ["飲料", "零食"], income: ["獎金"] });
+  });
+
   it("如果名稱太短，應該回傳失敗的 Result", () => {
     const shortNameProps = {
       name: "a", // 只有 1 個字

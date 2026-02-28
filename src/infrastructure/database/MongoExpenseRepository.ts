@@ -24,6 +24,7 @@ export class MongoExpenseRepository implements IExpenseRepository {
         })),
         date: expense.props.date ?? new Date(),
         category: expense.category,
+        type: expense.type,
       },
       { upsert: true, new: true },
     );
@@ -57,6 +58,7 @@ export class MongoExpenseRepository implements IExpenseRepository {
     splits: Array<{ userId: string; amount: number }>;
     date: Date;
     category?: string;
+    type?: string;
   }): Expense {
     const payments = (doc.payments ?? []).map(
       (p) =>
@@ -78,6 +80,7 @@ export class MongoExpenseRepository implements IExpenseRepository {
         splits,
         date: doc.date,
         category: doc.category ?? "",
+        type: (doc.type === "INCOME" ? "INCOME" : "EXPENSE"),
       },
       doc._id,
     );

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { expenseApi, ApiError, type PaymentRecord } from "@/lib/api";
+import { expenseApi, userApi, ApiError, type PaymentRecord } from "@/lib/api";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { MemberAvatarPicker } from "@/components/ui/MemberAvatarPicker";
 import { PixelCard } from "@/components/ui/PixelCard";
@@ -18,33 +18,33 @@ const SPLIT_MODE_LABELS: Record<SplitMode, { label: string; icon: string }> = {
 };
 
 // ── Category presets ──────────────────────────────────────
-const PRESET_CATEGORIES = [
-  { key: "food",      label: "餐飲",  icon: "🍽" },
-  { key: "transport", label: "交通",  icon: "🚗" },
-  { key: "housing",   label: "住房",  icon: "🏠" },
-  { key: "shopping",  label: "購物",  icon: "🛒" },
-  { key: "entertainment", label: "娛樂", icon: "🎮" },
-  { key: "health",    label: "醫療",  icon: "💊" },
-  { key: "education", label: "教育",  icon: "📚" },
-  { key: "travel",    label: "旅遊",  icon: "✈️" },
-  { key: "tech",      label: "3C",    icon: "💻" },
-  { key: "gift",      label: "禮物",  icon: "🎁" },
-  { key: "work",      label: "工作",  icon: "💼" },
-  { key: "sports",    label: "運動",  icon: "🏋️" },
+const EXPENSE_CATEGORIES = [
+  { key: "food",          label: "餐飲",    icon: "🍽" },
+  { key: "transport",     label: "交通",    icon: "🚗" },
+  { key: "housing",       label: "住房",    icon: "🏠" },
+  { key: "shopping",      label: "購物",    icon: "🛒" },
+  { key: "entertainment", label: "娛樂",    icon: "🎮" },
+  { key: "health",        label: "醫療",    icon: "💊" },
+  { key: "education",     label: "教育",    icon: "📚" },
+  { key: "travel",        label: "旅遊",    icon: "✈️" },
+  { key: "tech",          label: "3C",      icon: "💻" },
+  { key: "gift",          label: "禮物",    icon: "🎁" },
+  { key: "work",          label: "工作",    icon: "💼" },
+  { key: "sports",        label: "運動",    icon: "🏋️" },
 ];
-const MAX_CUSTOM = 87; // 99 - 12 presets
-const CUSTOM_STORAGE_KEY = "splitquest-custom-categories";
 
-function loadCustomCategories(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(CUSTOM_STORAGE_KEY) ?? "[]");
-  } catch { return []; }
-}
-function saveCustomCategory(name: string): void {
-  const existing = loadCustomCategories();
-  if (existing.includes(name) || existing.length >= MAX_CUSTOM) return;
-  localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify([...existing, name]));
-}
+const INCOME_CATEGORIES = [
+  { key: "salary",        label: "薪水",    icon: "💰" },
+  { key: "bonus",         label: "獎金",    icon: "🎯" },
+  { key: "stocks",        label: "股票",    icon: "📈" },
+  { key: "side",          label: "副業",    icon: "💡" },
+  { key: "rent",          label: "租金",    icon: "🏡" },
+  { key: "refund",        label: "退款",    icon: "💳" },
+  { key: "hongbao",       label: "禮金",    icon: "🧧" },
+  { key: "other-income",  label: "其他收入", icon: "✨" },
+];
+
+const MAX_CUSTOM = 87;
 
 function todayStr(): string {
   const d = new Date();
@@ -59,7 +59,7 @@ interface PaymentRow {
 
 export default function AddExpensePage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { userId, personalGroupId } = useAuthStore();
+  const { userId, personalGroupId, customCategories: storeCategories, updateUserInfo } = useAuthStore();
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -68,9 +68,33 @@ export default function AddExpensePage() {
 
   const [description, setDescription] = useState("");
   const [expenseDate, setExpenseDate] = useState(todayStr());
+  const [entryType, setEntryType] = useState<"EXPENSE" | "INCOME">("EXPENSE");
   const [category, setCategory] = useState("");
   const [customInput, setCustomInput] = useState("");
-  const [customCategories, setCustomCategories] = useState<string[]>(loadCustomCategories);
+
+  // Derive per-type custom categories from store
+  const customCategories = entryType === "INCOME" ? storeCategories.income : storeCategories.expense;
+
+  // When entryType changes, reset category
+  function switchEntryType(t: "EXPENSE" | "INCOME") {
+    setEntryType(t);
+    setCategory("");
+  }
+
+  async function addCustomCategory(name: string) {
+    if (!name || customCategories.includes(name) || customCategories.length >= MAX_CUSTOM) return;
+    const updated = {
+      expense: entryType === "EXPENSE" ? [...storeCategories.expense, name] : storeCategories.expense,
+      income:  entryType === "INCOME"  ? [...storeCategories.income,  name] : storeCategories.income,
+    };
+    try {
+      await userApi.updateProfile({ customCategories: updated });
+      updateUserInfo({ customCategories: updated });
+    } catch {
+      // best-effort: update store even if API fails
+      updateUserInfo({ customCategories: updated });
+    }
+  }
 
   // Personal: single amount field
   const [personalAmount, setPersonalAmount] = useState("");
@@ -143,6 +167,7 @@ export default function AddExpensePage() {
         groupId: groupId!,
         date: expenseDate,
         category: category || undefined,
+        type: isPersonal ? entryType : "EXPENSE" as const,
       };
 
       if (isPersonal) {
@@ -217,15 +242,37 @@ export default function AddExpensePage() {
       <form onSubmit={handleSubmit} noValidate aria-label="新增支出表單">
         <div className="space-y-4">
 
+          {/* Income / Expense toggle — personal only */}
+          {isPersonal && (
+            <div className="flex gap-2" role="group" aria-label="記錄類型">
+              {(["EXPENSE", "INCOME"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => switchEntryType(t)}
+                  className={`flex-1 py-3 font-pixel text-pixel-xs border-2 transition-all ${
+                    entryType === t
+                      ? t === "EXPENSE"
+                        ? "border-red-400 text-red-400 bg-red-400/10"
+                        : "border-green-400 text-green-400 bg-green-400/10"
+                      : "border-pixel-border text-pixel-muted hover:border-pixel-muted"
+                  }`}
+                >
+                  {t === "EXPENSE" ? "💸 支出" : "💰 收入"}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Description */}
-          <PixelCard title="支出資訊" titleIcon="💰">
+          <PixelCard title={isPersonal && entryType === "INCOME" ? "收入資訊" : "支出資訊"} titleIcon={isPersonal && entryType === "INCOME" ? "💰" : "💸"}>
             <PixelInput
               label="描述"
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               error={errors["description"]}
-              placeholder={isPersonal ? "咖啡、午餐、交通..." : "晚餐、機票、住宿..."}
+              placeholder={isPersonal && entryType === "INCOME" ? "薪資、獎金、副業收入..." : isPersonal ? "咖啡、午餐、交通..." : "晚餐、機票、住宿..."}
               required
               autoFocus
             />
@@ -258,7 +305,7 @@ export default function AddExpensePage() {
                 <span className="font-pixel text-[7px]">未分類</span>
               </button>
 
-              {PRESET_CATEGORIES.map((c) => (
+              {(entryType === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
                 <button
                   key={c.key}
                   type="button"
@@ -305,11 +352,10 @@ export default function AddExpensePage() {
                 <button
                   type="button"
                   disabled={!customInput.trim()}
-                  onClick={() => {
+                  onClick={async () => {
                     const name = customInput.trim();
                     if (!name) return;
-                    saveCustomCategory(name);
-                    setCustomCategories(loadCustomCategories());
+                    await addCustomCategory(name);
                     setCategory(name);
                     setCustomInput("");
                   }}

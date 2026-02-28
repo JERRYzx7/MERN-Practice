@@ -9,6 +9,7 @@ export interface IUserDocument extends Document<string> {
   avatarUrl?: string | null;
   oauthProvider?: string | null;
   oauthId?: string | null;
+  customCategories?: { expense: string[]; income: string[] };
 }
 
 const UserSchema = new Schema<IUserDocument>(
@@ -21,6 +22,13 @@ const UserSchema = new Schema<IUserDocument>(
     avatarUrl: { type: String, default: null },
     oauthProvider: { type: String, default: null },
     oauthId: { type: String, default: null },
+    customCategories: {
+      type: {
+        expense: { type: [String], default: [] },
+        income: { type: [String], default: [] },
+      },
+      default: () => ({ expense: [], income: [] }),
+    },
   },
   { _id: false, timestamps: true },
 );
