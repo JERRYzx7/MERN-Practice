@@ -6,6 +6,11 @@ export interface IGroupDocument extends Document<string> {
   type: "Personal" | "Team";
   ownerId: string;
   memberIds: string[];
+  inviteTokens?: Array<{
+    code: string;
+    expiresAt: Date;
+    createdBy: string;
+  }>;
 }
 
 const GroupSchema = new Schema<IGroupDocument>(
@@ -15,6 +20,13 @@ const GroupSchema = new Schema<IGroupDocument>(
     type: { type: String, enum: ["Personal", "Team"], required: true },
     ownerId: { type: String, required: true },
     memberIds: [{ type: String }],
+    inviteTokens: [
+      {
+        code: { type: String, required: true },
+        expiresAt: { type: Date, required: true },
+        createdBy: { type: String, required: true },
+      },
+    ],
   },
   { _id: false, timestamps: true },
 );

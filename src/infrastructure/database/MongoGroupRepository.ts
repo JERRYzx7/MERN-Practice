@@ -1,19 +1,25 @@
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
-import { Group, GroupType } from "@domain/entities/Group.js";
-import { GroupModel } from "./GroupSchema.js";
+import { Group, GroupType, type InviteToken } from "@domain/entities/Group.js";
+import { GroupModel, type IGroupDocument } from "./GroupSchema.js";
 
 export class MongoGroupRepository implements IGroupRepository {
   async findById(id: string): Promise<Group | null> {
     const doc = await GroupModel.findById(id).lean();
     if (!doc) return null;
-    return this.toDomain(doc._id, doc.name, doc.type, doc.ownerId, doc.memberIds);
+    return this.toDomain(doc as unknown as IGroupDocument);
   }
 
   async findByUserId(userId: string): Promise<Group[]> {
     const docs = await GroupModel.find({ memberIds: userId }).lean();
-    return docs.map((doc) =>
-      this.toDomain(doc._id, doc.name, doc.type, doc.ownerId, doc.memberIds),
-    );
+    return docs.map((doc) => this.toDomain(doc as unknown as IGroupDocument));
+  }
+
+  async findByInviteCode(inviteCode: string): Promise<Group | null> {
+    const doc = await GroupModel.findOne({
+      "inviteTokens.code": inviteCode,
+    }).lean();
+    if (!doc) return null;
+    return this.toDomain(doc as unknown as IGroupDocument);
   }
 
   async isUserInGroup(userId: string, groupId: string): Promise<boolean> {
@@ -33,21 +39,22 @@ export class MongoGroupRepository implements IGroupRepository {
         type: group.type,
         ownerId: group.ownerId,
         memberIds: group.memberIds,
+        inviteTokens: group.inviteTokens ?? [],
       },
       { upsert: true, new: true },
     );
   }
 
-  private toDomain(
-    id: string,
-    name: string,
-    type: "Personal" | "Team",
-    ownerId: string,
-    memberIds: string[],
-  ): Group {
+  private toDomain(doc: IGroupDocument): Group {
     const result = Group.create(
-      { name, type: type as GroupType, ownerId, memberIds },
-      id,
+      {
+        name: doc.name,
+        type: doc.type as GroupType,
+        ownerId: doc.ownerId,
+        memberIds: doc.memberIds,
+        inviteTokens: doc.inviteTokens ?? [],
+      },
+      doc._id,
     );
     if (result.isFailure) throw new Error(`Group mapping failed: ${result.error}`);
     return result.getValue();

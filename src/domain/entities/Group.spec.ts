@@ -62,4 +62,99 @@ describe("Group Entity (群組實體測試)", () => {
       expect(group.memberIds).toContain(mockFriendId);
     });
   });
+
+  describe("邀請 Token 功能", () => {
+    it("TEAM 群組應該能成功加入邀請 token", () => {
+      const group = Group.create({
+        name: "室友分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const inviteCode = "abc-123-xyz";
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 天後
+
+      const result = group.addInviteToken(inviteCode, expiresAt, mockOwnerId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(group.inviteTokens).toHaveLength(1);
+      expect(group.inviteTokens![0]).toEqual({
+        code: inviteCode,
+        expiresAt,
+        createdBy: mockOwnerId,
+      });
+    });
+
+    it("PERSONAL 群組應該拒絕加入邀請 token", () => {
+      const group = Group.create({
+        name: "個人空間",
+        type: GroupType.PERSONAL,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const inviteCode = "abc-123-xyz";
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      const result = group.addInviteToken(inviteCode, expiresAt, mockOwnerId);
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error).toBe("個人群組不能產生邀請連結");
+    });
+
+    it("應該能透過有效的邀請 token 加入成員", () => {
+      const group = Group.create({
+        name: "室友分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const inviteCode = "valid-code-123";
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      group.addInviteToken(inviteCode, expiresAt, mockOwnerId);
+
+      const result = group.acceptInvite(inviteCode, mockFriendId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(group.memberIds).toContain(mockFriendId);
+    });
+
+    it("過期的邀請 token 應該被拒絕", () => {
+      const group = Group.create({
+        name: "室友分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const inviteCode = "expired-code";
+      const expiresAt = new Date(Date.now() - 1000); // 已過期
+      group.addInviteToken(inviteCode, expiresAt, mockOwnerId);
+
+      const result = group.acceptInvite(inviteCode, mockFriendId);
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error).toBe("邀請連結已過期");
+    });
+
+    it("已經是成員的使用者不應該能重複加入", () => {
+      const group = Group.create({
+        name: "室友分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const inviteCode = "code-123";
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      group.addInviteToken(inviteCode, expiresAt, mockOwnerId);
+
+      const result = group.acceptInvite(inviteCode, mockOwnerId); // 擁有者自己嘗試加入
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error).toBe("您已經是群組成員");
+    });
+  });
 });

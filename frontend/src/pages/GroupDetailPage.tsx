@@ -8,15 +8,18 @@ import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelInput } from "@/components/ui/PixelInput";
 import { PixelLoader, PixelEmpty } from "@/components/ui/PixelLoader";
+import { InviteQRModal } from "@/components/InviteQRModal";
 
 export default function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { userId } = useAuthStore();
+  const { userId, personalGroupId } = useAuthStore();
   const { groups } = useLocalGroups();
   const group = groups.find((g) => g.id === groupId);
+  const isTeamGroup = groupId !== personalGroupId;
 
   const [newMemberId, setNewMemberId] = useState("");
   const [memberError, setMemberError] = useState("");
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const { data: balanceData, isLoading: isLoadingBalance } = useQuery({
     queryKey: ["balance", groupId],
@@ -99,6 +102,25 @@ export default function GroupDetailPage() {
           </PixelButton>
         </Link>
       </div>
+
+      {/* Invite Button (Team groups only) */}
+      {isTeamGroup && (
+        <PixelButton
+          variant="secondary"
+          fullWidth
+          onClick={() => setShowInviteModal(true)}
+        >
+          📨 邀請好友加入
+        </PixelButton>
+      )}
+
+      {/* Invite QR Modal */}
+      <InviteQRModal
+        groupId={groupId!}
+        groupName={group?.name ?? "群組"}
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+      />
 
       {/* Settlements preview */}
       {settlements.length > 0 && (

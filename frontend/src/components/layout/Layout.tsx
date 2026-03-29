@@ -1,7 +1,11 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 
-export default function Layout() {
+interface LayoutProps {
+  children?: React.ReactNode;
+}
+
+export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-pixel-bg flex flex-col">
       {/* Skip to main content (a11y) */}
@@ -17,7 +21,7 @@ export default function Layout() {
         className="flex-1 px-4 py-6 md:px-8 md:py-8 pb-24 md:pb-8 max-w-4xl mx-auto w-full"
         tabIndex={-1}
       >
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
 
       {/* Pixel grid background decoration */}

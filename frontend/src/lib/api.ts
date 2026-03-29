@@ -182,6 +182,18 @@ export const groupApi = {
         descriptions: string[];
       };
     }>(`/groups/${groupId}/balance`),
+
+  createInvite: (groupId: string) =>
+    request<{ success: true; data: { inviteCode: string } }>(
+      `/groups/${groupId}/invites`,
+      { method: "POST" },
+    ),
+
+  joinByInvite: (inviteCode: string) =>
+    request<{ success: true; data: { groupId: string } }>(
+      `/groups/join/${inviteCode}`,
+      { method: "POST" },
+    ),
 };
 
 // ── Expenses ──────────────────────────────────────────────

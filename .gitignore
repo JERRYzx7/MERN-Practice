@@ -27,3 +27,10 @@ yarn-error.log*
 # playwright reports
 playwright-report/
 test-results/
+
+api-doc.md
+ARCHITECTURE.md
+./project.md
+./process.md
+
+./github/agents
