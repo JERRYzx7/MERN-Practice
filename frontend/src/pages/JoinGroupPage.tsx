@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { groupApi } from "@/lib/api";
@@ -7,13 +7,13 @@ import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
 import { PixelLoader } from "@/components/ui/PixelLoader";
 
-type JoinStatus = "idle" | "joining" | "success" | "error" | "already_member";
+type JoinStatus = "confirm" | "joining" | "success" | "error" | "already_member";
 
 export default function JoinGroupPage() {
   const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const { token } = useAuthStore();
-  const [status, setStatus] = useState<JoinStatus>("idle");
+  const [status, setStatus] = useState<JoinStatus>("confirm");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
 
@@ -34,13 +34,16 @@ export default function JoinGroupPage() {
     },
   });
 
-  useEffect(() => {
-    // 如果已登入且有邀請碼，自動嘗試加入
-    if (token && inviteCode && status === "idle") {
+  function handleJoin() {
+    if (inviteCode) {
       setStatus("joining");
       joinMutation.mutate(inviteCode);
     }
-  }, [token, inviteCode, status]);
+  }
+
+  function handleCancel() {
+    navigate("/groups");
+  }
 
   // 未登入：顯示登入提示
   if (!token) {
@@ -64,6 +67,39 @@ export default function JoinGroupPage() {
                   ✨ 註冊新帳號
                 </PixelButton>
               </Link>
+            </div>
+          </div>
+        </PixelCard>
+      </div>
+    );
+  }
+
+  // 確認加入畫面
+  if (status === "confirm") {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center p-4">
+        <PixelCard variant="gold" className="max-w-md w-full text-center">
+          <div className="py-6 space-y-6">
+            <div className="text-6xl">📨</div>
+            <h1 className="font-pixel text-pixel-lg text-pixel-gold">
+              群組邀請
+            </h1>
+            <p className="font-vt text-vt-lg text-pixel-text">
+              你收到了一個群組邀請！
+              <br />
+              是否要加入這個群組？
+            </p>
+            <div className="space-y-3">
+              <PixelButton onClick={handleJoin} className="w-full">
+                ✅ 確認加入
+              </PixelButton>
+              <PixelButton
+                variant="secondary"
+                onClick={handleCancel}
+                className="w-full"
+              >
+                ❌ 取消
+              </PixelButton>
             </div>
           </div>
         </PixelCard>
@@ -168,10 +204,7 @@ export default function JoinGroupPage() {
             </p>
             <div className="space-y-3">
               <PixelButton
-                onClick={() => {
-                  setStatus("idle");
-                  setErrorMessage("");
-                }}
+                onClick={() => setStatus("confirm")}
                 className="w-full"
               >
                 🔄 重試

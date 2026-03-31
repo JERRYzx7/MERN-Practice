@@ -3,148 +3,85 @@
  *
  * 使用方式:
  *   node generate-icons.mjs
- *
- * 不需要額外安裝套件（純 Node.js，使用 Buffer 直接寫入 PNG）
  */
 
-import { writeFileSync, mkdirSync } from "fs";
+import sharp from "sharp";
+import { mkdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const OUTPUT = join(__dirname, "public", "icons");
+mkdirSync(OUTPUT, { recursive: true });
 
-// ── Minimal PNG encoder (pure JS, no dependencies) ──────────
+// 像素風格金幣圖示 (64x64 base, scaled up)
+function createPixelArt(size) {
+  const scale = size / 64;
+  const pixels = [];
 
-function crc32(buf) {
-  let crc = 0xffffffff;
-  const table = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    table[i] = c;
-  }
-  for (let i = 0; i < buf.length; i++) crc = table[(crc ^ buf[i]) & 0xff] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
-}
+  // Colors
+  const bg = { r: 10, g: 14, b: 26 };       // #0a0e1a
+  const gold = { r: 251, g: 191, b: 36 };   // #fbbf24
+  const darkGold = { r: 217, g: 119, b: 6 }; // #d97706
 
-function chunk(type, data) {
-  const typeBytes = Buffer.from(type, "ascii");
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const crcData = Buffer.concat([typeBytes, data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(crcData));
-  return Buffer.concat([len, typeBytes, data, crc]);
-}
-
-function adler32(buf) {
-  let s1 = 1, s2 = 0;
-  for (const b of buf) { s1 = (s1 + b) % 65521; s2 = (s2 + s1) % 65521; }
-  return (s2 << 16) | s1;
-}
-
-function deflate(data) {
-  // Store method (no compression) for simplicity
-  const blocks = [];
-  const BLOCK_SIZE = 32768;
-  for (let i = 0; i < data.length; i += BLOCK_SIZE) {
-    const block = data.slice(i, i + BLOCK_SIZE);
-    const last = i + BLOCK_SIZE >= data.length ? 1 : 0;
-    const header = Buffer.from([last, block.length & 0xff, (block.length >> 8) & 0xff,
-      (~block.length) & 0xff, ((~block.length) >> 8) & 0xff]);
-    blocks.push(Buffer.concat([header, block]));
-  }
-  const adler = Buffer.alloc(4);
-  adler.writeUInt32BE(adler32(data));
-  return Buffer.concat([Buffer.from([0x78, 0x01]), ...blocks, adler]);
-}
-
-function encodePNG(width, height, pixels) {
-  // pixels: Uint8Array of RGBA values, row by row
-  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 2;  // color type: RGB (no alpha for smaller file)
-  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
-
-  // Raw image data with filter bytes
-  const raw = [];
-  for (let y = 0; y < height; y++) {
-    raw.push(0); // filter type None
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      raw.push(pixels[i], pixels[i + 1], pixels[i + 2]);
-    }
-  }
-  const rawBuf = Buffer.from(raw);
-
-  return Buffer.concat([
-    signature,
-    chunk("IHDR", ihdr),
-    chunk("IDAT", deflate(rawBuf)),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-}
-
-// ── Pixel art icon drawing ───────────────────────────────────
-
-function hexToRgba(hex) {
-  const n = parseInt(hex.replace("#", ""), 16);
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff, 255];
-}
-
-function drawIcon(size) {
-  const pixels = new Uint8Array(size * size * 4);
-  const s = size / 64;
+  // Create base 64x64 grid
+  const grid = Array(64).fill(null).map(() => Array(64).fill(bg));
 
   function fillRect(x, y, w, h, color) {
-    const [r, g, b, a] = typeof color === "string" ? hexToRgba(color) : color;
-    for (let ry = Math.round(y * s); ry < Math.round((y + h) * s); ry++) {
-      for (let rx = Math.round(x * s); rx < Math.round((x + w) * s); rx++) {
-        if (rx >= 0 && rx < size && ry >= 0 && ry < size) {
-          const i = (ry * size + rx) * 4;
-          pixels[i] = r; pixels[i + 1] = g; pixels[i + 2] = b; pixels[i + 3] = a;
-        }
+    for (let ry = y; ry < y + h && ry < 64; ry++) {
+      for (let rx = x; rx < x + w && rx < 64; rx++) {
+        if (rx >= 0 && ry >= 0) grid[ry][rx] = color;
       }
     }
   }
 
-  // Background
-  fillRect(0, 0, 64, 64, "#0a0e1a");
-
   // Coin shape
-  fillRect(16, 8, 32, 4, "#fbbf24");
-  fillRect(12, 12, 40, 4, "#fbbf24");
-  fillRect(8, 16, 48, 32, "#fbbf24");
-  fillRect(12, 48, 40, 4, "#fbbf24");
-  fillRect(16, 52, 32, 4, "#fbbf24");
+  fillRect(16, 8, 32, 4, gold);
+  fillRect(12, 12, 40, 4, gold);
+  fillRect(8, 16, 48, 32, gold);
+  fillRect(12, 48, 40, 4, gold);
+  fillRect(16, 52, 32, 4, gold);
 
-  // Coin inner (darker gold)
-  fillRect(12, 20, 40, 24, "#d97706");
+  // Coin inner
+  fillRect(12, 20, 40, 24, darkGold);
 
   // Pixel "S" letter
-  fillRect(20, 24, 20, 4, "#fbbf24");
-  fillRect(20, 28, 4, 4, "#fbbf24");
-  fillRect(20, 32, 20, 4, "#fbbf24");
-  fillRect(36, 36, 4, 4, "#fbbf24");
-  fillRect(20, 40, 20, 4, "#fbbf24");
+  fillRect(20, 24, 20, 4, gold);
+  fillRect(20, 28, 4, 4, gold);
+  fillRect(20, 32, 20, 4, gold);
+  fillRect(36, 36, 4, 4, gold);
+  fillRect(20, 40, 20, 4, gold);
 
-  return encodePNG(size, size, pixels);
+  // Convert to raw pixels (scaled)
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const srcY = Math.floor(y / scale);
+      const srcX = Math.floor(x / scale);
+      const c = grid[srcY]?.[srcX] || bg;
+      pixels.push(c.r, c.g, c.b);
+    }
+  }
+
+  return Buffer.from(pixels);
 }
 
-// ── Generate icons ───────────────────────────────────────────
-
-const OUTPUT = join(__dirname, "public", "icons");
-mkdirSync(OUTPUT, { recursive: true });
-
+// Generate icons
 for (const size of [96, 192, 512]) {
-  const png = drawIcon(size);
-  const out = join(OUTPUT, `pwa-${size}.png`);
-  writeFileSync(out, png);
-  console.log(`✓ ${out} (${png.length} bytes)`);
+  const raw = createPixelArt(size);
+  const outputPath = join(OUTPUT, `pwa-${size}.png`);
+
+  await sharp(raw, { raw: { width: size, height: size, channels: 3 } })
+    .png()
+    .toFile(outputPath);
+
+  console.log(`✓ ${outputPath}`);
 }
 
+// Also create favicon.ico (32x32)
+const favicon32 = createPixelArt(32);
+await sharp(favicon32, { raw: { width: 32, height: 32, channels: 3 } })
+  .png()
+  .toFile(join(OUTPUT, "..", "favicon.png"));
+
+console.log(`✓ ${join(OUTPUT, "..", "favicon.png")}`);
 console.log("\n🎮 SplitQuest PWA icons generated!");

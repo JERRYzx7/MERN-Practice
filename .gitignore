@@ -30,7 +30,6 @@ test-results/
 
 api-doc.md
 ARCHITECTURE.md
-./project.md
-./process.md
-
+project.md
+process.md
 ./github/agents

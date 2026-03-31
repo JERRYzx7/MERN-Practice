@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { groupApi, ApiError } from "@/lib/api";
+import { groupApi } from "@/lib/api";
 import { useLocalGroups } from "@/hooks/useLocalGroups";
 import { PixelCard } from "@/components/ui/PixelCard";
 import { PixelButton } from "@/components/ui/PixelButton";
-import { PixelInput } from "@/components/ui/PixelInput";
 import { PixelLoader, PixelEmpty } from "@/components/ui/PixelLoader";
 import { InviteQRModal } from "@/components/InviteQRModal";
 
@@ -17,9 +16,14 @@ export default function GroupDetailPage() {
   const group = groups.find((g) => g.id === groupId);
   const isTeamGroup = groupId !== personalGroupId;
 
-  const [newMemberId, setNewMemberId] = useState("");
-  const [memberError, setMemberError] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
+
+  // 取得群組成員
+  const { data: membersData, isLoading: isLoadingMembers } = useQuery({
+    queryKey: ["members", groupId],
+    queryFn: () => groupApi.getMembers(groupId!),
+    enabled: !!groupId && isTeamGroup,
+  });
 
   const { data: balanceData, isLoading: isLoadingBalance } = useQuery({
     queryKey: ["balance", groupId],
@@ -27,43 +31,22 @@ export default function GroupDetailPage() {
     enabled: !!groupId,
   });
 
-  const addMemberMutation = useMutation({
-    mutationFn: () => groupApi.addMember(groupId!, newMemberId.trim()),
-    onSuccess: () => {
-      setNewMemberId("");
-      setMemberError("");
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) setMemberError(err.message);
-    },
-  });
-
-  function handleAddMember(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newMemberId.trim()) {
-      setMemberError("請輸入成員 ID");
-      return;
-    }
-    addMemberMutation.mutate();
-  }
-
+  const members = membersData?.data ?? [];
   const settlements = balanceData?.data.settlements ?? [];
   const myBalance = balanceData?.data.netBalances[userId!] ?? 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+      {/* Header - 合併返回按鈕和群組名稱 */}
+      <div className="flex items-center">
         <Link
           to="/groups"
-          className="font-pixel text-pixel-xs text-pixel-muted hover:text-pixel-gold transition-colors"
-          aria-label="返回群組列表"
+          className="font-pixel text-pixel-sm text-pixel-gold hover:text-pixel-light transition-colors flex items-center gap-2"
+          aria-label={`返回群組列表，目前在 ${group?.name ?? "群組"}`}
         >
-          ◀ 返回
+          <span className="text-pixel-muted">◀</span>
+          {group?.name ?? "載入中..."}
         </Link>
-        <h1 className="font-pixel text-pixel-sm text-pixel-gold">
-          {group?.name ?? groupId}
-        </h1>
       </div>
 
       {/* My balance in this group */}
@@ -103,15 +86,59 @@ export default function GroupDetailPage() {
         </Link>
       </div>
 
-      {/* Invite Button (Team groups only) */}
+      {/* Members Card (Team groups only) */}
       {isTeamGroup && (
-        <PixelButton
-          variant="secondary"
-          fullWidth
-          onClick={() => setShowInviteModal(true)}
-        >
-          📨 邀請好友加入
-        </PixelButton>
+        <PixelCard title={`成員 (${members.length})`} titleIcon="👥">
+          {isLoadingMembers ? (
+            <PixelLoader text="載入中" />
+          ) : members.length === 0 ? (
+            <p className="font-vt text-vt-sm text-pixel-muted text-center py-2">
+              尚無成員資料
+            </p>
+          ) : (
+            <ul className="space-y-2" role="list">
+              {members.map((member) => (
+                <li
+                  key={member.id}
+                  className="flex items-center gap-3 py-2 border-b border-pixel-border last:border-0"
+                >
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-none border-2 border-pixel-border overflow-hidden bg-pixel-dark flex-shrink-0">
+                    {member.avatarUrl ? (
+                      <img
+                        src={member.avatarUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center font-pixel text-pixel-xs text-pixel-muted">
+                        {member.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  {/* Name */}
+                  <span className="font-vt text-vt-base text-pixel-light flex-1">
+                    {member.name}
+                    {member.id === userId && (
+                      <span className="text-pixel-gold ml-2">(你)</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Invite Button inside Members card */}
+          <div className="mt-4 pt-3 border-t border-pixel-border">
+            <PixelButton
+              variant="secondary"
+              fullWidth
+              onClick={() => setShowInviteModal(true)}
+            >
+              📨 邀請好友加入
+            </PixelButton>
+          </div>
+        </PixelCard>
       )}
 
       {/* Invite QR Modal */}
@@ -148,33 +175,6 @@ export default function GroupDetailPage() {
       {!isLoadingBalance && settlements.length === 0 && (
         <PixelEmpty icon="✨" title="帳目清晰！" />
       )}
-
-      {/* Add member */}
-      <PixelCard title="加入成員" titleIcon="⊕" variant="dark">
-        <form onSubmit={handleAddMember} aria-label="加入成員表單">
-          <div className="flex gap-3 items-end">
-            <div className="flex-1">
-              <PixelInput
-                label="成員 ID"
-                type="text"
-                value={newMemberId}
-                onChange={(e) => setNewMemberId(e.target.value)}
-                error={memberError}
-                placeholder="輸入成員 ID..."
-              />
-            </div>
-            <div className="pb-[1px]">
-              <PixelButton
-                type="submit"
-                variant="secondary"
-                loading={addMemberMutation.isPending}
-              >
-                加入
-              </PixelButton>
-            </div>
-          </div>
-        </form>
-      </PixelCard>
     </div>
   );
 }
