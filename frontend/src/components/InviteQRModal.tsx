@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { QRCodeSVG } from "qrcode.react";
 import { groupApi } from "@/lib/api";
-import { PixelButton } from "./ui/PixelButton";
-import { PixelCard } from "./ui/PixelCard";
+import { GlassButton } from "./ui/GlassButton";
 
 interface InviteQRModalProps {
   groupId: string;
@@ -39,7 +38,6 @@ export function InviteQRModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textArea = document.createElement("textarea");
       textArea.value = inviteUrl;
       document.body.appendChild(textArea);
@@ -59,51 +57,53 @@ export function InviteQRModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="invite-modal-title"
     >
-      <PixelCard
-        variant="gold"
-        className="w-full max-w-sm mx-4 animate-float-pixel"
+      <div
+        className="glass-card w-full max-w-sm mx-4 p-5 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="border-b-2 border-pixel-gold pb-3 mb-4 flex items-center justify-between">
+        <div className="border-b border-white/5 pb-3 mb-4 flex items-center justify-between">
           <h2
             id="invite-modal-title"
-            className="font-pixel text-pixel-sm text-pixel-gold uppercase tracking-wider"
+            className="font-pixel text-[10px] text-neon-teal uppercase tracking-widest"
           >
-            📨 邀請好友
+            邀請好友
           </h2>
           <button
             onClick={onClose}
-            className="text-pixel-muted hover:text-pixel-red transition-colors font-vt text-vt-lg"
+            className="text-slate-500 hover:text-neon-red transition-colors p-1 rounded-lg hover:bg-white/5 cursor-pointer"
             aria-label="關閉"
           >
-            ✕
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
         {/* Content */}
         <div className="space-y-4">
-          <p className="font-vt text-vt-base text-pixel-text text-center">
-            邀請好友加入 <span className="text-pixel-gold">{groupName}</span>
+          <p className="text-sm text-slate-300 text-center">
+            邀請好友加入 <span className="text-neon-teal font-semibold">{groupName}</span>
           </p>
 
           {!inviteCode ? (
             <div className="text-center py-4">
-              <PixelButton
+              <GlassButton
                 onClick={handleGenerateInvite}
                 disabled={createInviteMutation.isPending}
                 className="w-full"
               >
-                {createInviteMutation.isPending ? "產生中..." : "🎫 產生邀請連結"}
-              </PixelButton>
+                {createInviteMutation.isPending ? "產生中..." : "產生邀請連結"}
+              </GlassButton>
               {createInviteMutation.isError && (
-                <p className="mt-2 text-pixel-red font-vt text-vt-sm">
+                <p className="mt-2 text-neon-red text-xs">
                   產生失敗，請稍後再試
                 </p>
               )}
@@ -111,42 +111,42 @@ export function InviteQRModal({
           ) : (
             <>
               {/* QR Code */}
-              <div className="flex justify-center p-4 bg-white">
+              <div className="flex justify-center p-4 bg-white rounded-xl">
                 <QRCodeSVG
                   value={inviteUrl!}
                   size={180}
                   level="M"
                   includeMargin={false}
                   bgColor="#ffffff"
-                  fgColor="#0a0e1a"
+                  fgColor="#0a0e1e"
                 />
               </div>
 
               {/* Invite URL */}
-              <div className="bg-pixel-bg border-2 border-pixel-border p-3">
-                <p className="font-vt text-vt-sm text-pixel-muted mb-1">邀請連結</p>
-                <p className="font-vt text-vt-sm text-pixel-cyan break-all">
+              <div className="glass-surface p-3">
+                <p className="text-[10px] text-slate-500 mb-1">邀請連結</p>
+                <p className="text-xs text-neon-teal break-all font-mono">
                   {inviteUrl}
                 </p>
               </div>
 
               {/* Copy Button */}
-              <PixelButton
+              <GlassButton
                 onClick={handleCopy}
                 variant={copied ? "success" : "primary"}
                 className="w-full"
               >
-                {copied ? "✅ 已複製!" : "📋 複製連結"}
-              </PixelButton>
+                {copied ? "已複製!" : "複製連結"}
+              </GlassButton>
 
               {/* Expiry Notice */}
-              <p className="font-vt text-vt-sm text-pixel-muted text-center">
-                ⏰ 此連結 7 天內有效
+              <p className="text-[10px] text-slate-500 text-center">
+                此連結 7 天內有效
               </p>
             </>
           )}
         </div>
-      </PixelCard>
+      </div>
     </div>
   );
 }

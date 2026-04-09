@@ -1,34 +1,39 @@
 import { clsx } from "clsx";
 
-type BadgeVariant = "gold" | "green" | "red" | "cyan" | "muted";
+type BadgeVariant = "teal" | "green" | "red" | "purple" | "amber" | "sky" | "muted";
 
-interface PixelBadgeProps {
+interface GlassBadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
   className?: string;
+  icon?: React.ReactNode;
 }
 
 const badgeVariants: Record<BadgeVariant, string> = {
-  gold: "border-pixel-gold text-pixel-gold bg-pixel-gold/10",
-  green: "border-pixel-green text-pixel-green bg-pixel-green/10",
-  red: "border-pixel-red text-pixel-red bg-pixel-red/10",
-  cyan: "border-pixel-cyan text-pixel-cyan bg-pixel-cyan/10",
-  muted: "border-pixel-border text-pixel-muted bg-pixel-card",
+  teal: "bg-neon-teal/15 text-neon-teal border-neon-teal/25",
+  green: "bg-neon-green/15 text-neon-green border-neon-green/25",
+  red: "bg-neon-red/15 text-neon-red border-neon-red/25",
+  purple: "bg-neon-purple/15 text-neon-purple border-neon-purple/25",
+  amber: "bg-neon-amber/15 text-neon-amber border-neon-amber/25",
+  sky: "bg-neon-sky/15 text-neon-sky border-neon-sky/25",
+  muted: "bg-white/5 text-slate-400 border-white/10",
 };
 
-export function PixelBadge({
+export function GlassBadge({
   children,
-  variant = "gold",
+  variant = "teal",
   className,
-}: PixelBadgeProps) {
+  icon,
+}: GlassBadgeProps) {
   return (
     <span
       className={clsx(
-        "inline-block border-2 px-2 py-1 font-vt text-vt-sm",
+        "pill border",
         badgeVariants[variant],
         className,
       )}
     >
+      {icon && <span className="flex-shrink-0">{icon}</span>}
       {children}
     </span>
   );
@@ -51,8 +56,8 @@ export function AmountBadge({
   return (
     <span
       className={clsx(
-        "font-vt text-vt-xl font-bold",
-        isPositive ? "text-pixel-green" : "text-pixel-red",
+        "font-mono text-2xl font-bold tracking-tight",
+        isPositive ? "text-neon-green" : "text-neon-red",
         className,
       )}
       aria-label={`${isPositive ? "收入" : "支出"} ${currency}${Math.abs(amount).toFixed(2)}`}

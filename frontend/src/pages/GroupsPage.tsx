@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { groupApi, ApiError } from "@/lib/api";
-import { PixelCard } from "@/components/ui/PixelCard";
-import { PixelButton } from "@/components/ui/PixelButton";
-import { PixelInput } from "@/components/ui/PixelInput";
-import { PixelEmpty, PixelLoader } from "@/components/ui/PixelLoader";
-import { PixelBadge } from "@/components/ui/PixelBadge";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { GlassButton } from "@/components/ui/GlassButton";
+import { GlassInput } from "@/components/ui/GlassInput";
+import { GlassEmpty, GlassLoader } from "@/components/ui/GlassLoader";
+import { GlassBadge } from "@/components/ui/GlassBadge";
 
 export default function GroupsPage() {
   const { userId } = useAuthStore();
@@ -22,7 +22,6 @@ export default function GroupsPage() {
     enabled: !!userId,
   });
 
-  // Only show Team groups on this page; Personal group is the Dashboard
   const teamGroups = (data?.data ?? []).filter((g) => g.type === "Team");
 
   const mutation = useMutation({
@@ -52,29 +51,38 @@ export default function GroupsPage() {
     mutation.mutate();
   }
 
-  if (isLoading) return <PixelLoader />;
+  if (isLoading) return <GlassLoader />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="font-pixel text-pixel-sm text-pixel-gold">⊕ 我的群組</h1>
-        <PixelButton
-          variant="primary"
+        <h1 className="font-pixel text-[11px] text-neon-teal tracking-wider">我的群組</h1>
+        <GlassButton
+          variant={showForm ? "ghost" : "primary"}
           size="sm"
           onClick={() => setShowForm((v) => !v)}
           aria-expanded={showForm}
           aria-controls="create-group-form"
         >
-          {showForm ? "✕ 取消" : "+ 新群組"}
-        </PixelButton>
+          {showForm ? "取消" : "+ 新群組"}
+        </GlassButton>
       </div>
 
       {/* Create group form */}
       {showForm && (
-        <PixelCard id="create-group-form" title="建立新群組" titleIcon="⊕" variant="gold">
+        <GlassCard id="create-group-form" title="建立新群組" variant="teal"
+          titleIcon={
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="23" y1="11" x2="17" y2="11" />
+              <line x1="20" y1="8" x2="20" y2="14" />
+            </svg>
+          }
+        >
           <form onSubmit={handleCreate} aria-label="建立群組表單">
             <div className="flex flex-col gap-4">
-              <PixelInput
+              <GlassInput
                 label="群組名稱"
                 type="text"
                 value={groupName}
@@ -84,23 +92,29 @@ export default function GroupsPage() {
                 autoFocus
                 required
               />
-              <PixelButton
+              <GlassButton
                 type="submit"
                 variant="primary"
                 fullWidth
                 loading={mutation.isPending}
               >
-                ▶ 建立
-              </PixelButton>
+                建立
+              </GlassButton>
             </div>
           </form>
-        </PixelCard>
+        </GlassCard>
       )}
 
       {/* Groups list */}
       {teamGroups.length === 0 ? (
-        <PixelEmpty
-          icon="🏰"
+        <GlassEmpty
+          icon={
+            <svg className="w-10 h-10 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          }
           title="還沒有群組"
           description="建立一個群組開始分帳吧！"
         />
@@ -110,19 +124,21 @@ export default function GroupsPage() {
             <li key={group.id}>
               <Link
                 to={`/groups/${group.id}`}
-                className="block border-2 border-pixel-border shadow-pixel bg-pixel-panel p-4 hover:border-pixel-gold hover:shadow-pixel-gold transition-all duration-75 hover:translate-x-[2px] hover:translate-y-[2px]"
+                className="block glass-card p-4 hover:border-neon-teal/20 hover:shadow-glow-teal transition-all duration-300 cursor-pointer group"
                 aria-label={`群組：${group.name}，${group.memberIds.length} 名成員`}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="font-pixel text-pixel-xs text-pixel-text mb-2">
+                    <h2 className="text-sm font-semibold text-slate-200 mb-2 group-hover:text-neon-teal transition-colors">
                       {group.name}
                     </h2>
-                    <PixelBadge variant="muted">
+                    <GlassBadge variant="muted">
                       {group.memberIds.length} 人
-                    </PixelBadge>
+                    </GlassBadge>
                   </div>
-                  <span className="text-2xl text-pixel-muted" aria-hidden="true">▶</span>
+                  <svg className="w-5 h-5 text-slate-600 group-hover:text-neon-teal transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                 </div>
               </Link>
             </li>

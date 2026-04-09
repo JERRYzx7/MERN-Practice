@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { userApi, ApiError } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
-import { PixelButton } from "@/components/ui/PixelButton";
-import { PixelInput } from "@/components/ui/PixelInput";
+import { GlassButton } from "@/components/ui/GlassButton";
+import { GlassInput } from "@/components/ui/GlassInput";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -48,38 +48,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-pixel-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #2dd4bf, transparent 70%)" }} aria-hidden="true" />
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #a78bfa, transparent 70%)" }} aria-hidden="true" />
+
+      <div className="w-full max-w-md animate-slide-up relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <p className="text-6xl mb-4 animate-float-pixel" aria-hidden="true">⚔</p>
-          <h1 className="font-pixel text-pixel-lg text-pixel-gold text-shadow-pixel">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-neon-teal to-emerald-600 shadow-glow-teal-lg mb-4 animate-float">
+            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <h1 className="font-pixel text-[13px] text-neon-teal text-glow-teal tracking-widest">
             SplitQuest
           </h1>
-          <p className="font-vt text-vt-base text-pixel-muted mt-2">
-            像素風格分帳冒險
+          <p className="text-sm text-slate-500 mt-2">
+            協作式智能分帳
           </p>
         </div>
 
         {/* Card */}
-        <div className="border-2 border-pixel-gold shadow-pixel-gold bg-pixel-panel p-6">
-          <h2 className="font-pixel text-pixel-sm text-pixel-gold mb-6 text-center">
-            ▶ 開始冒險
+        <div className="glass-card p-6">
+          <h2 className="font-pixel text-[10px] text-neon-teal mb-6 text-center uppercase tracking-widest">
+            開始使用
           </h2>
 
           <form onSubmit={handleSubmit} noValidate aria-label="登入表單">
             <div className="flex flex-col gap-4">
-              <PixelInput
+              <GlassInput
                 label="Email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 error={errors["email"]}
-                placeholder="hero@quest.com"
+                placeholder="hello@example.com"
                 autoComplete="email"
                 required
               />
-              <PixelInput
+              <GlassInput
                 label="密碼"
                 type="password"
                 value={password}
@@ -91,38 +99,36 @@ export default function LoginPage() {
               />
 
               {apiError && (
-                <p role="alert" className="font-vt text-vt-sm text-pixel-red border-2 border-pixel-red p-3">
-                  ✕ {apiError}
-                </p>
+                <div className="flex items-center gap-2 text-neon-red text-sm bg-neon-red/10 border border-neon-red/20 rounded-xl px-4 py-3" role="alert">
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {apiError}
+                </div>
               )}
 
-              <PixelButton
+              <GlassButton
                 type="submit"
                 variant="primary"
                 size="lg"
                 fullWidth
                 loading={mutation.isPending}
               >
-                ▶ 出發！
-              </PixelButton>
+                登入
+              </GlassButton>
             </div>
           </form>
 
-          <p className="font-vt text-vt-sm text-pixel-muted text-center mt-4">
-            新冒險者？{" "}
+          <p className="text-sm text-slate-500 text-center mt-5">
+            還沒有帳號？{" "}
             <Link
               to="/register"
-              className="text-pixel-cyan hover:text-pixel-gold transition-colors"
+              className="text-neon-teal hover:text-neon-green transition-colors font-medium"
             >
               建立帳號 →
             </Link>
           </p>
         </div>
-
-        {/* Blink cursor */}
-        <p className="text-center font-pixel text-pixel-xs text-pixel-muted mt-6">
-          PRESS START <span className="animate-blink">▮</span>
-        </p>
       </div>
     </div>
   );

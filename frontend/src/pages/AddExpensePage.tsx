@@ -5,19 +5,18 @@ import { useAuthStore } from "@/stores/authStore";
 import { expenseApi, userApi, ApiError, type PaymentRecord } from "@/lib/api";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { MemberAvatarPicker } from "@/components/ui/MemberAvatarPicker";
-import { PixelCard } from "@/components/ui/PixelCard";
-import { PixelButton } from "@/components/ui/PixelButton";
-import { PixelInput } from "@/components/ui/PixelInput";
+import { GlassCard } from "@/components/ui/GlassCard";
+import { GlassButton } from "@/components/ui/GlassButton";
+import { GlassInput } from "@/components/ui/GlassInput";
 
 type SplitMode = "EQUAL" | "PERCENTAGE" | "EXACT";
 
 const SPLIT_MODE_LABELS: Record<SplitMode, { label: string; icon: string }> = {
-  EQUAL: { label: "等額平分", icon: "⊟" },
+  EQUAL: { label: "等額平分", icon: "=" },
   PERCENTAGE: { label: "百分比", icon: "%" },
   EXACT: { label: "指定金額", icon: "$" },
 };
 
-// ── Category presets ──────────────────────────────────────
 const EXPENSE_CATEGORIES = [
   { key: "food",          label: "餐飲",    icon: "🍽" },
   { key: "transport",     label: "交通",    icon: "🚗" },
@@ -72,10 +71,8 @@ export default function AddExpensePage() {
   const [category, setCategory] = useState("");
   const [customInput, setCustomInput] = useState("");
 
-  // Derive per-type custom categories from store
   const customCategories = entryType === "INCOME" ? storeCategories.income : storeCategories.expense;
 
-  // When entryType changes, reset category
   function switchEntryType(t: "EXPENSE" | "INCOME") {
     setEntryType(t);
     setCategory("");
@@ -91,31 +88,20 @@ export default function AddExpensePage() {
       await userApi.updateProfile({ customCategories: updated });
       updateUserInfo({ customCategories: updated });
     } catch {
-      // best-effort: update store even if API fails
       updateUserInfo({ customCategories: updated });
     }
   }
 
-  // Personal: single amount field
   const [personalAmount, setPersonalAmount] = useState("");
-
-  // Group: payment rows (who paid how much)
   const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([
     { userId: userId ?? "", amount: "", note: "" },
   ]);
-
-  // Group: who participates in the split
   const [splitMembers, setSplitMembers] = useState<string[]>([userId ?? ""]);
   const [splitMode, setSplitMode] = useState<SplitMode>("EQUAL");
-
-  // PERCENTAGE / EXACT raw maps (userId → value string)
   const [percentageMap, setPercentageMap] = useState<Record<string, string>>({});
   const [exactMap, setExactMap] = useState<Record<string, string>>({});
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
-
-  // ── helpers ──────────────────────────────────────────────
 
   const totalPaid = paymentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
 
@@ -137,8 +123,6 @@ export default function AddExpensePage() {
     setPaymentRows((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  // ── validation ───────────────────────────────────────────
-
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!description.trim()) e["description"] = "請輸入描述";
@@ -157,8 +141,6 @@ export default function AddExpensePage() {
     setErrors(e);
     return Object.keys(e).length === 0;
   }
-
-  // ── mutation ─────────────────────────────────────────────
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -201,7 +183,6 @@ export default function AddExpensePage() {
         return expenseApi.create({ ...base, payments, splitType: "PERCENTAGE", percentageMap: pct });
       }
 
-      // EXACT
       const exact: Record<string, number> = {};
       splitMembers.forEach((id) => {
         const v = parseFloat(exactMap[id] ?? "0");
@@ -226,47 +207,55 @@ export default function AddExpensePage() {
 
   const backTo = isPersonal ? "/dashboard" : `/groups/${groupId}`;
 
-  // ── render ────────────────────────────────────────────────
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Link to={backTo} className="font-pixel text-pixel-xs text-pixel-muted hover:text-pixel-gold transition-colors">
-          ◀ 返回
+        <Link to={backTo} className="text-slate-500 hover:text-neon-teal transition-colors p-1">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
         </Link>
-        <h1 className="font-pixel text-pixel-sm text-pixel-gold">
-          {isPersonal ? "📒 記帳" : "＋ 新增支出"}
+        <h1 className="font-pixel text-[11px] text-neon-teal tracking-wider">
+          {isPersonal ? "記帳" : "新增支出"}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit} noValidate aria-label="新增支出表單">
         <div className="space-y-4">
 
-          {/* Income / Expense toggle — personal only */}
+          {/* Income / Expense toggle */}
           {isPersonal && (
-            <div className="flex gap-2" role="group" aria-label="記錄類型">
+            <div className="flex gap-2 p-1 bg-white/5 rounded-xl" role="group" aria-label="記錄類型">
               {(["EXPENSE", "INCOME"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => switchEntryType(t)}
-                  className={`flex-1 py-3 font-pixel text-pixel-xs border-2 transition-all ${
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
                     entryType === t
                       ? t === "EXPENSE"
-                        ? "border-red-400 text-red-400 bg-red-400/10"
-                        : "border-green-400 text-green-400 bg-green-400/10"
-                      : "border-pixel-border text-pixel-muted hover:border-pixel-muted"
+                        ? "text-neon-red bg-neon-red/10"
+                        : "text-neon-green bg-neon-green/10"
+                      : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
-                  {t === "EXPENSE" ? "💸 支出" : "💰 收入"}
+                  {t === "EXPENSE" ? "支出" : "收入"}
                 </button>
               ))}
             </div>
           )}
 
           {/* Description */}
-          <PixelCard title={isPersonal && entryType === "INCOME" ? "收入資訊" : "支出資訊"} titleIcon={isPersonal && entryType === "INCOME" ? "💰" : "💸"}>
-            <PixelInput
+          <GlassCard
+            title={isPersonal && entryType === "INCOME" ? "收入資訊" : "支出資訊"}
+            titleIcon={
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            }
+          >
+            <GlassInput
               label="描述"
               type="text"
               value={description}
@@ -276,33 +265,48 @@ export default function AddExpensePage() {
               required
               autoFocus
             />
-          </PixelCard>
+          </GlassCard>
 
           {/* Date */}
-          <PixelCard title="日期" titleIcon="📅">
+          <GlassCard title="日期"
+            titleIcon={
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            }
+          >
             <input
               type="date"
               value={expenseDate}
               onChange={(e) => setExpenseDate(e.target.value)}
-              className="bg-pixel-card border-2 border-pixel-border px-4 py-3 font-vt text-vt-base text-pixel-text w-full focus:outline-none focus-visible:border-pixel-gold"
+              className="glass-input px-4 py-3 text-sm text-slate-100 w-full"
             />
-          </PixelCard>
+          </GlassCard>
 
           {/* Category */}
-          <PixelCard title="分類" titleIcon="🏷">
+          <GlassCard title="分類"
+            titleIcon={
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
+                <line x1="7" y1="7" x2="7.01" y2="7" />
+              </svg>
+            }
+          >
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mb-3">
-              {/* None */}
               <button
                 type="button"
                 onClick={() => setCategory("")}
-                className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                className={`flex flex-col items-center gap-1 rounded-xl p-2 transition-all duration-200 cursor-pointer border ${
                   category === ""
-                    ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
-                    : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                    ? "border-neon-teal/30 text-neon-teal bg-neon-teal/10"
+                    : "border-white/5 text-slate-500 hover:border-white/10"
                 }`}
               >
                 <span className="text-lg">—</span>
-                <span className="font-pixel text-[7px]">未分類</span>
+                <span className="text-[9px] font-medium">未分類</span>
               </button>
 
               {(entryType === "INCOME" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
@@ -310,14 +314,14 @@ export default function AddExpensePage() {
                   key={c.key}
                   type="button"
                   onClick={() => setCategory(c.label)}
-                  className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                  className={`flex flex-col items-center gap-1 rounded-xl p-2 transition-all duration-200 cursor-pointer border ${
                     category === c.label
-                      ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
-                      : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                      ? "border-neon-teal/30 text-neon-teal bg-neon-teal/10"
+                      : "border-white/5 text-slate-500 hover:border-white/10"
                   }`}
                 >
                   <span className="text-lg">{c.icon}</span>
-                  <span className="font-pixel text-[7px]">{c.label}</span>
+                  <span className="text-[9px] font-medium">{c.label}</span>
                 </button>
               ))}
 
@@ -326,19 +330,18 @@ export default function AddExpensePage() {
                   key={name}
                   type="button"
                   onClick={() => setCategory(name)}
-                  className={`flex flex-col items-center gap-1 border-2 p-2 transition-all ${
+                  className={`flex flex-col items-center gap-1 rounded-xl p-2 transition-all duration-200 cursor-pointer border ${
                     category === name
-                      ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
-                      : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                      ? "border-neon-teal/30 text-neon-teal bg-neon-teal/10"
+                      : "border-white/5 text-slate-500 hover:border-white/10"
                   }`}
                 >
                   <span className="text-lg">🏷</span>
-                  <span className="font-pixel text-[7px] truncate w-full text-center">{name}</span>
+                  <span className="text-[9px] font-medium truncate w-full text-center">{name}</span>
                 </button>
               ))}
             </div>
 
-            {/* Custom category input */}
             {customCategories.length < MAX_CUSTOM && (
               <div className="flex gap-2">
                 <input
@@ -347,7 +350,7 @@ export default function AddExpensePage() {
                   onChange={(e) => setCustomInput(e.target.value)}
                   placeholder="自訂分類名稱"
                   maxLength={20}
-                  className="flex-1 bg-pixel-card border-2 border-pixel-border px-3 py-2 font-vt text-vt-sm text-pixel-text focus:outline-none focus-visible:border-pixel-gold placeholder:text-pixel-muted"
+                  className="glass-input flex-1 px-3 py-2 text-sm text-slate-100"
                 />
                 <button
                   type="button"
@@ -359,18 +362,25 @@ export default function AddExpensePage() {
                     setCategory(name);
                     setCustomInput("");
                   }}
-                  className="border-2 border-pixel-border px-3 py-2 font-pixel text-pixel-xs text-pixel-muted hover:border-pixel-gold hover:text-pixel-gold disabled:opacity-40 transition-colors"
+                  className="border border-white/10 px-3 py-2 text-xs text-slate-500 hover:border-neon-teal/30 hover:text-neon-teal disabled:opacity-40 transition-all rounded-xl cursor-pointer"
                 >
-                  ＋ 儲存
+                  + 儲存
                 </button>
               </div>
             )}
-          </PixelCard>
+          </GlassCard>
 
-          {/* ── Personal: simple amount ── */}
+          {/* Personal: simple amount */}
           {isPersonal && (
-            <PixelCard title="金額" titleIcon="💴">
-              <PixelInput
+            <GlassCard title="金額"
+              titleIcon={
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                </svg>
+              }
+            >
+              <GlassInput
                 label="金額（TWD）"
                 type="number"
                 value={personalAmount}
@@ -381,17 +391,23 @@ export default function AddExpensePage() {
                 step="0.01"
                 required
               />
-            </PixelCard>
+            </GlassCard>
           )}
 
-          {/* ── Group: payment rows ── */}
+          {/* Group: payment rows */}
           {!isPersonal && (
             <>
-              <PixelCard title="付款人" titleIcon="💳">
+              <GlassCard title="付款人"
+                titleIcon={
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                    <line x1="1" y1="10" x2="23" y2="10" />
+                  </svg>
+                }
+              >
                 <div className="space-y-3">
                   {paymentRows.map((row, idx) => (
-                    <div key={idx} className="space-y-2 border border-pixel-border p-3">
-                      {/* Payer picker */}
+                    <div key={idx} className="space-y-2 glass-surface p-3">
                       <MemberAvatarPicker
                         members={members}
                         selected={row.userId ? [row.userId] : []}
@@ -399,11 +415,11 @@ export default function AddExpensePage() {
                         label={`付款人 ${idx + 1}`}
                       />
                       {errors[`pay-user-${idx}`] && (
-                        <p className="font-vt text-vt-xs text-pixel-red">{errors[`pay-user-${idx}`]}</p>
+                        <p className="text-xs text-neon-red">{errors[`pay-user-${idx}`]}</p>
                       )}
                       <div className="flex gap-2">
                         <div className="flex-1">
-                          <PixelInput
+                          <GlassInput
                             label="金額"
                             type="number"
                             value={row.amount}
@@ -415,7 +431,7 @@ export default function AddExpensePage() {
                           />
                         </div>
                         <div className="flex-1">
-                          <PixelInput
+                          <GlassInput
                             label="備註（選填）"
                             type="text"
                             value={row.note}
@@ -427,30 +443,41 @@ export default function AddExpensePage() {
                           <button
                             type="button"
                             onClick={() => removeRow(idx)}
-                            className="self-end mb-1 font-pixel text-pixel-xs text-pixel-red hover:opacity-70 px-2"
+                            className="self-end mb-1 text-neon-red hover:opacity-70 px-2 cursor-pointer"
                             aria-label="移除此付款"
                           >
-                            ✕
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
                           </button>
                         )}
                       </div>
                     </div>
                   ))}
 
-                  <PixelButton type="button" variant="secondary" size="sm" onClick={addRow}>
-                    ＋ 新增付款項目
-                  </PixelButton>
+                  <GlassButton type="button" variant="secondary" size="sm" onClick={addRow}>
+                    + 新增付款項目
+                  </GlassButton>
 
                   {totalPaid > 0 && (
-                    <p className="font-pixel text-pixel-xs text-pixel-gold text-right">
-                      付款總計：${totalPaid.toFixed(2)}
+                    <p className="text-xs text-neon-teal text-right">
+                      付款總計：<span className="font-mono font-bold">${totalPaid.toFixed(2)}</span>
                     </p>
                   )}
                 </div>
-              </PixelCard>
+              </GlassCard>
 
               {/* Split members */}
-              <PixelCard title="分攤成員" titleIcon="👥">
+              <GlassCard title="分攤成員"
+                titleIcon={
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                  </svg>
+                }
+              >
                 <MemberAvatarPicker
                   members={members}
                   selected={splitMembers}
@@ -458,13 +485,20 @@ export default function AddExpensePage() {
                   label="選擇分攤成員"
                 />
                 {errors["splitMembers"] && (
-                  <p className="font-vt text-vt-xs text-pixel-red mt-2">{errors["splitMembers"]}</p>
+                  <p className="text-xs text-neon-red mt-2">{errors["splitMembers"]}</p>
                 )}
-              </PixelCard>
+              </GlassCard>
 
               {/* Split mode */}
-              <PixelCard title="分帳模式" titleIcon="⚖">
-                <div className="grid grid-cols-3 gap-2 mb-4" role="radiogroup" aria-label="分帳模式">
+              <GlassCard title="分帳模式"
+                titleIcon={
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                  </svg>
+                }
+              >
+                <div className="grid grid-cols-3 gap-2 mb-4 p-1 bg-white/5 rounded-xl" role="radiogroup" aria-label="分帳模式">
                   {(Object.keys(SPLIT_MODE_LABELS) as SplitMode[]).map((mode) => {
                     const m = SPLIT_MODE_LABELS[mode];
                     const isSelected = splitMode === mode;
@@ -475,30 +509,30 @@ export default function AddExpensePage() {
                         role="radio"
                         aria-checked={isSelected}
                         onClick={() => setSplitMode(mode)}
-                        className={`border-2 p-3 text-center transition-all duration-75 ${
+                        className={`rounded-lg p-3 text-center transition-all duration-200 cursor-pointer ${
                           isSelected
-                            ? "border-pixel-gold text-pixel-gold bg-pixel-gold/10"
-                            : "border-pixel-border text-pixel-muted hover:border-pixel-gold/50"
+                            ? "text-neon-teal bg-neon-teal/10 shadow-glow-teal"
+                            : "text-slate-500 hover:text-slate-300"
                         }`}
                       >
-                        <div className="font-vt text-vt-xl mb-1">{m.icon}</div>
-                        <div className="font-pixel text-[8px]">{m.label}</div>
+                        <div className="font-mono text-xl mb-1">{m.icon}</div>
+                        <div className="text-[9px] font-medium">{m.label}</div>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* PERCENTAGE: per-member % input */}
+                {/* PERCENTAGE inputs */}
                 {splitMode === "PERCENTAGE" && splitMembers.length > 0 && (
                   <div className="space-y-2">
                     {splitMembers.map((id) => {
                       const member = members.find((m) => m.id === id);
                       return (
                         <div key={id} className="flex items-center gap-2">
-                          <span className="font-pixel text-pixel-xs text-pixel-muted w-24 truncate">
+                          <span className="text-xs text-slate-500 w-24 truncate">
                             {member?.name ?? id.slice(0, 8)}
                           </span>
-                          <PixelInput
+                          <GlassInput
                             label=""
                             type="number"
                             value={percentageMap[id] ?? ""}
@@ -509,27 +543,27 @@ export default function AddExpensePage() {
                             min="0"
                             max="100"
                           />
-                          <span className="font-vt text-vt-sm text-pixel-muted">%</span>
+                          <span className="text-xs text-slate-500">%</span>
                         </div>
                       );
                     })}
-                    <p className="font-pixel text-pixel-xs text-pixel-muted text-right">
-                      總計：{splitMembers.reduce((s, id) => s + (parseFloat(percentageMap[id] ?? "0") || 0), 0)}%
+                    <p className="text-xs text-slate-500 text-right">
+                      總計：<span className="font-mono">{splitMembers.reduce((s, id) => s + (parseFloat(percentageMap[id] ?? "0") || 0), 0)}%</span>
                     </p>
                   </div>
                 )}
 
-                {/* EXACT: per-member amount input */}
+                {/* EXACT inputs */}
                 {splitMode === "EXACT" && splitMembers.length > 0 && (
                   <div className="space-y-2">
                     {splitMembers.map((id) => {
                       const member = members.find((m) => m.id === id);
                       return (
                         <div key={id} className="flex items-center gap-2">
-                          <span className="font-pixel text-pixel-xs text-pixel-muted w-24 truncate">
+                          <span className="text-xs text-slate-500 w-24 truncate">
                             {member?.name ?? id.slice(0, 8)}
                           </span>
-                          <PixelInput
+                          <GlassInput
                             label=""
                             type="number"
                             value={exactMap[id] ?? ""}
@@ -543,26 +577,29 @@ export default function AddExpensePage() {
                         </div>
                       );
                     })}
-                    <p className="font-pixel text-pixel-xs text-pixel-muted text-right">
-                      總計：${splitMembers.reduce((s, id) => s + (parseFloat(exactMap[id] ?? "0") || 0), 0).toFixed(2)}
+                    <p className="text-xs text-slate-500 text-right">
+                      總計：<span className="font-mono">${splitMembers.reduce((s, id) => s + (parseFloat(exactMap[id] ?? "0") || 0), 0).toFixed(2)}</span>
                     </p>
                   </div>
                 )}
-              </PixelCard>
+              </GlassCard>
             </>
           )}
 
           {apiError && (
-            <p role="alert" className="font-vt text-vt-sm text-pixel-red border-2 border-pixel-red p-3">
-              ✕ {apiError}
-            </p>
+            <div className="flex items-center gap-2 text-neon-red text-sm bg-neon-red/10 border border-neon-red/20 rounded-xl px-4 py-3" role="alert">
+              <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {apiError}
+            </div>
           )}
 
-          <PixelButton type="submit" variant="primary" size="lg" fullWidth loading={mutation.isPending}>
-            {isPersonal ? "▶ 記帳" : "▶ 確認記帳"}
-          </PixelButton>
+          <GlassButton type="submit" variant="primary" size="lg" fullWidth loading={mutation.isPending}>
+            {isPersonal ? "記帳" : "確認記帳"}
+          </GlassButton>
         </div>
       </form>
     </div>
   );
-}
+}
