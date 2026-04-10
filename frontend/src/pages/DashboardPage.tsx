@@ -72,23 +72,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* ── Hero: Isometric Illustration + Wallet Balance ── */}
+      {/* ── Header: Greeting + Wallet Balance ── */}
       <section aria-labelledby="greeting-heading">
-        <div className="relative overflow-hidden rounded-2xl">
-          {/* Isometric illustration */}
-          <div className="relative">
-            <img
-              src="/hero-illustration.png"
-              alt="SplitQuest 協作分帳場景"
-              className="w-full h-auto rounded-2xl"
-              loading="eager"
-            />
-            {/* Gradient overlay at bottom for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-bg via-brand-bg/40 to-transparent rounded-2xl" />
-          </div>
-
-          {/* Overlay content */}
-          <div className="absolute bottom-0 left-0 right-0 p-5 space-y-3">
+        <GlassCard variant="teal" className="p-6">
+          <div className="space-y-4">
             <div>
               <h1
                 id="greeting-heading"
@@ -122,7 +109,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        </GlassCard>
       </section>
 
       {/* ── Quick actions ── */}

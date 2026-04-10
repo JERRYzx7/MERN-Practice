@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassButton } from "@/components/ui/GlassButton";
 import { GlassLoader, GlassEmpty } from "@/components/ui/GlassLoader";
 import { InviteQRModal } from "@/components/InviteQRModal";
+import { IsometricOffice } from "@/components/ui/IsometricOffice";
 
 export default function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -51,6 +52,15 @@ export default function GroupDetailPage() {
           {group?.name ?? "載入中..."}
         </h1>
       </div>
+
+      {/* Isometric Office - Gather Town style */}
+      {isTeamGroup && members.length > 0 && (
+        <IsometricOffice
+          members={members}
+          currentUserId={userId}
+          netBalances={balanceData?.data.netBalances ?? {}}
+        />
+      )}
 
       {/* My balance */}
       <GlassCard title="我的結餘" variant="teal"
