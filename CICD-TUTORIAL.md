@@ -140,12 +140,12 @@ gcloud config set project splitquest-prod
 # https://console.cloud.google.com/billing
 
 # 啟用必要的 API
-gcloud services enable \
-  container.googleapis.com \
-  artifactregistry.googleapis.com \
-  compute.googleapis.com \
-  iam.googleapis.com \
-  cloudresourcemanager.googleapis.com \
+gcloud services enable `
+  container.googleapis.com `
+  artifactregistry.googleapis.com `
+  compute.googleapis.com `
+  iam.googleapis.com `
+  cloudresourcemanager.googleapis.com `
   servicenetworking.googleapis.com
 ```
 
@@ -153,16 +153,16 @@ gcloud services enable \
 
 ```powershell
 # 建立服務帳號
-gcloud iam service-accounts create terraform-sa \
+gcloud iam service-accounts create terraform-sa `
   --display-name="Terraform Service Account"
 
 # 授予權限 (Owner 權限，生產環境要更細緻)
-gcloud projects add-iam-policy-binding splitquest-prod \
-  --member="serviceAccount:terraform-sa@splitquest-prod.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding splitquest-prod `
+  --member="serviceAccount:terraform-sa@splitquest-prod.iam.gserviceaccount.com" `
   --role="roles/owner"
 
 # 下載金鑰 (妥善保管！)
-gcloud iam service-accounts keys create ./terraform-sa-key.json \
+gcloud iam service-accounts keys create ./terraform-sa-key.json `
   --iam-account=terraform-sa@splitquest-prod.iam.gserviceaccount.com
 
 # ⚠️ 重要：將金鑰加入 .gitignore
@@ -573,8 +573,8 @@ terraform apply
 
 ```powershell
 # 使用 Terraform 輸出的指令
-gcloud container clusters get-credentials splitquest-cluster \
-  --zone asia-east1-a \
+gcloud container clusters get-credentials splitquest-cluster `
+  --zone asia-east1-a `
   --project splitquest-prod
 
 # 驗證連線
@@ -1320,39 +1320,39 @@ jobs:
 
 ```powershell
 # 建立 Workload Identity Pool
-gcloud iam workload-identity-pools create github-actions \
-  --project=splitquest-prod \
-  --location=global \
+gcloud iam workload-identity-pools create github-actions `
+  --project=splitquest-prod `
+  --location=global `
   --display-name="GitHub Actions Pool"
 
 # 建立 OIDC Provider
-gcloud iam workload-identity-pools providers create-oidc github \
-  --project=splitquest-prod \
-  --location=global \
-  --workload-identity-pool=github-actions \
-  --display-name="GitHub Provider" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+gcloud iam workload-identity-pools providers create-oidc github `
+  --project=splitquest-prod `
+  --location=global `
+  --workload-identity-pool=github-actions `
+  --display-name="GitHub Provider" `
+  --issuer-uri="https://token.actions.githubusercontent.com" `
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" `
   --attribute-condition="assertion.repository_owner == 'YOUR_GITHUB_USERNAME'"
 
 # 建立服務帳號給 CI 用
-gcloud iam service-accounts create github-actions-sa \
+gcloud iam service-accounts create github-actions-sa `
   --display-name="GitHub Actions Service Account"
 
 # 授予權限
-gcloud projects add-iam-policy-binding splitquest-prod \
-  --member="serviceAccount:github-actions-sa@splitquest-prod.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding splitquest-prod `
+  --member="serviceAccount:github-actions-sa@splitquest-prod.iam.gserviceaccount.com" `
   --role="roles/artifactregistry.writer"
 
-gcloud projects add-iam-policy-binding splitquest-prod \
-  --member="serviceAccount:github-actions-sa@splitquest-prod.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding splitquest-prod `
+  --member="serviceAccount:github-actions-sa@splitquest-prod.iam.gserviceaccount.com" `
   --role="roles/artifactregistry.reader"
 
 # 允許 GitHub 扮演服務帳號
-gcloud iam service-accounts add-iam-policy-binding \
-  github-actions-sa@splitquest-prod.iam.gserviceaccount.com \
-  --project=splitquest-prod \
-  --role="roles/iam.workloadIdentityUser" \
+gcloud iam service-accounts add-iam-policy-binding `
+  github-actions-sa@splitquest-prod.iam.gserviceaccount.com `
+  --project=splitquest-prod `
+  --role="roles/iam.workloadIdentityUser" `
   --member="principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions/attribute.repository/YOUR_GITHUB_USERNAME/mern"
 ```
 
@@ -1383,9 +1383,9 @@ gcloud iam service-accounts add-iam-policy-binding \
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
-  --create-namespace \
+helm install ingress-nginx ingress-nginx/ingress-nginx `
+  --namespace ingress-nginx `
+  --create-namespace `
   --set controller.service.type=LoadBalancer
 
 # 等待 LoadBalancer 取得外部 IP
@@ -1401,9 +1401,9 @@ kubectl get svc -n ingress-nginx -w
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 
-helm install cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
+helm install cert-manager jetstack/cert-manager `
+  --namespace cert-manager `
+  --create-namespace `
   --set installCRDs=true
 
 # 建立 Let's Encrypt ClusterIssuer
@@ -1541,9 +1541,9 @@ kubectl apply -f apps/splitquest.yaml
 # 在 splitquest namespace 建立 secrets
 kubectl create namespace splitquest
 
-kubectl create secret generic splitquest-secrets \
-  --namespace splitquest \
-  --from-literal=MONGODB_URI="mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/splitquest" \
+kubectl create secret generic splitquest-secrets `
+  --namespace splitquest `
+  --from-literal=MONGODB_URI="mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/splitquest" `
   --from-literal=JWT_SECRET="your-super-secret-jwt-key"
 ```
 
@@ -1653,12 +1653,12 @@ helm repo update
 kubectl create namespace monitoring
 
 # 安裝 kube-prometheus-stack（包含 Prometheus、Grafana、AlertManager）
-helm install prometheus prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --set prometheus.prometheusSpec.retention=7d \
-  --set prometheus.prometheusSpec.resources.requests.memory=256Mi \
-  --set prometheus.prometheusSpec.resources.requests.cpu=100m \
-  --set grafana.adminPassword=your-secure-password \
+helm install prometheus prometheus-community/kube-prometheus-stack `
+  --namespace monitoring `
+  --set prometheus.prometheusSpec.retention=7d `
+  --set prometheus.prometheusSpec.resources.requests.memory=256Mi `
+  --set prometheus.prometheusSpec.resources.requests.cpu=100m `
+  --set grafana.adminPassword=your-secure-password `
   --set alertmanager.enabled=false
 
 # 等待安裝完成
@@ -1898,13 +1898,13 @@ node_config {
 
 ```powershell
 # 縮減到 0 nodes
-gcloud container clusters resize splitquest-cluster \
-  --zone asia-east1-a \
+gcloud container clusters resize splitquest-cluster `
+  --zone asia-east1-a `
   --num-nodes 0
 
 # 恢復
-gcloud container clusters resize splitquest-cluster \
-  --zone asia-east1-a \
+gcloud container clusters resize splitquest-cluster `
+  --zone asia-east1-a `
   --num-nodes 1
 ```
 
@@ -1912,11 +1912,11 @@ gcloud container clusters resize splitquest-cluster \
 
 ```powershell
 # 建立定時縮減 (例如晚上)
-gcloud scheduler jobs create http shutdown-cluster \
-  --schedule="0 22 * * *" \
-  --uri="https://container.googleapis.com/v1/projects/splitquest-prod/zones/asia-east1-a/clusters/splitquest-cluster/nodePools/primary-pool:setSize" \
-  --http-method=POST \
-  --message-body='{"nodeCount":0}' \
+gcloud scheduler jobs create http shutdown-cluster `
+  --schedule="0 22 * * *" `
+  --uri="https://container.googleapis.com/v1/projects/splitquest-prod/zones/asia-east1-a/clusters/splitquest-cluster/nodePools/primary-pool:setSize" `
+  --http-method=POST `
+  --message-body='{"nodeCount":0}' `
   --oauth-service-account-email=terraform-sa@splitquest-prod.iam.gserviceaccount.com
 ```
 

@@ -33,3 +33,5 @@ ARCHITECTURE.md
 project.md
 process.md
 ./github/agents
+
+terraform-sa-key.json
