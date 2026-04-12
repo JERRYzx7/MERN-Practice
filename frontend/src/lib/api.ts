@@ -64,7 +64,15 @@ export interface LoginRequest {
 
 export interface AuthResponse {
   success: true;
-  data: { id: string; email: string; name: string; personalGroupId: string; token: string };
+  data: {
+    id: string;
+    email: string;
+    name: string;
+    personalGroupId: string;
+    avatarUrl?: string | null;
+    customCategories?: { expense: string[]; income: string[] };
+    token: string;
+  };
 }
 
 export const userApi = {
@@ -117,6 +125,9 @@ export interface ExpenseRecord {
   currency: string;
   description: string;
   splits: { userId: string; amount: number }[];
+  date: string;
+  category: string;
+  type: "EXPENSE" | "INCOME";
 }
 
 export interface Member {
@@ -130,6 +141,7 @@ export interface UpdateProfileRequest {
   avatarUrl?: string | null;
   currentPassword?: string;
   newPassword?: string;
+  customCategories?: { expense: string[]; income: string[] };
 }
 
 export interface ProfileResponse {
@@ -138,6 +150,7 @@ export interface ProfileResponse {
   email: string;
   avatarUrl: string | null;
   personalGroupId?: string;
+  customCategories?: { expense: string[]; income: string[] };
 }
 
 
@@ -169,6 +182,18 @@ export const groupApi = {
         descriptions: string[];
       };
     }>(`/groups/${groupId}/balance`),
+
+  createInvite: (groupId: string) =>
+    request<{ success: true; data: { inviteCode: string } }>(
+      `/groups/${groupId}/invites`,
+      { method: "POST" },
+    ),
+
+  joinByInvite: (inviteCode: string) =>
+    request<{ success: true; data: { groupId: string } }>(
+      `/groups/join/${inviteCode}`,
+      { method: "POST" },
+    ),
 };
 
 // ── Expenses ──────────────────────────────────────────────
@@ -181,6 +206,9 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
+      type?: "EXPENSE" | "INCOME";
       splitType: "EQUAL";
       memberIds: string[];
     }
@@ -189,6 +217,9 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
+      type?: "EXPENSE" | "INCOME";
       splitType: "PERCENTAGE";
       percentageMap: Record<string, number>;
     }
@@ -197,6 +228,9 @@ export type CreateExpenseRequest =
       currency?: string;
       payments: PaymentRecord[];
       groupId: string;
+      date?: string;
+      category?: string;
+      type?: "EXPENSE" | "INCOME";
       splitType: "EXACT";
       exactMap: Record<string, number>;
     };

@@ -9,6 +9,7 @@ interface UserProps {
   avatarUrl?: string | null;
   oauthProvider?: string | null;
   oauthId?: string | null;
+  customCategories?: { expense: string[]; income: string[] };
 }
 
 export class User extends Entity<UserProps> {
@@ -33,6 +34,9 @@ export class User extends Entity<UserProps> {
   get oauthId(): string | null | undefined {
     return this.props.oauthId;
   }
+  get customCategories(): { expense: string[]; income: string[] } {
+    return this.props.customCategories ?? { expense: [], income: [] };
+  }
   private constructor(props: UserProps, id?: string) {
     super(props, id);
   }
@@ -55,5 +59,9 @@ export class User extends Entity<UserProps> {
     if (fields.name !== undefined) this.props.name = fields.name;
     if (fields.avatarUrl !== undefined) this.props.avatarUrl = fields.avatarUrl;
     if (fields.passwordHash !== undefined) this.props.passwordHash = fields.passwordHash;
+  }
+
+  public updateCustomCategories(categories: { expense: string[]; income: string[] }): void {
+    this.props.customCategories = categories;
   }
 }

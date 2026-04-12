@@ -246,7 +246,7 @@
 
 ### `GET /api/groups/:groupId/expenses`
 
-> 取得某群組的所有支出記錄
+> 取得某群組的所有支出/收入記錄
 
 **Response `200`**
 ```json
@@ -256,18 +256,32 @@
     {
       "id": "uuid-v4",
       "groupId": "uuid-group",
-      "payerId": "uuid-payer",
+      "payments": [
+        { "userId": "uuid-v4", "amount": 200 },
+        { "userId": "uuid-v4-2", "amount": 100 }
+      ],
       "amount": 300,
       "currency": "TWD",
       "description": "晚餐",
       "splits": [
         { "userId": "uuid-v4", "amount": 150 },
         { "userId": "uuid-v4-2", "amount": 150 }
-      ]
+      ],
+      "date": "2026-03-31",
+      "category": "餐飲",
+      "type": "EXPENSE"
     }
   ]
 }
 ```
+
+| 回應欄位 | 說明 |
+|---------|------|
+| `payments` | 付款人列表 (取代舊版 `payerId`) |
+| `amount` | 總金額 (所有 payments 加總) |
+| `date` | 支出日期 |
+| `category` | 分類名稱 |
+| `type` | `"EXPENSE"` 或 `"INCOME"` |
 
 ---
 
@@ -309,56 +323,144 @@
 
 ---
 
+### `POST /api/groups/:groupId/invites`
+
+> 建立群組邀請連結（QR Code 用）
+
+**Path Params**
+| 參數 | 說明 |
+|------|------|
+| `groupId` | 群組 ID |
+
+**Response `201`**
+```json
+{
+  "success": true,
+  "data": {
+    "inviteCode": "uuid-v4"
+  }
+}
+```
+
+> 邀請碼有效期 **7 天**，前端可用此 code 生成 QR Code 連結：`/join/{inviteCode}`
+
+**Errors**
+| Status | 原因 |
+|--------|------|
+| `401` | 未攜帶 token |
+| `404` | 群組不存在 |
+
+---
+
+### `POST /api/groups/join/:inviteCode`
+
+> 透過邀請碼加入群組
+
+**Path Params**
+| 參數 | 說明 |
+|------|------|
+| `inviteCode` | 邀請碼 (UUID) |
+
+**Response `200`**
+```json
+{
+  "success": true,
+  "data": {
+    "groupId": "uuid-v4"
+  }
+}
+```
+
+**Errors**
+| Status | 原因 |
+|--------|------|
+| `400` | 無效的邀請連結 |
+| `400` | 邀請已過期 |
+| `401` | 未攜帶 token |
+| `422` | 已經是群組成員 |
+
+---
+
 ## Expenses
 
 > ⚠️ 以下所有端點需要 `Authorization: Bearer <token>`
 
 ### `POST /api/expenses`
 
-> 建立一筆支出，支援三種分帳模式
+> 建立一筆支出/收入，支援**多付款人**和三種分帳模式
 
-**Request Body（EQUAL）**
+**Request Body（EQUAL 等額分攤 + 多付款人）**
 ```json
 {
   "description": "午餐",
-  "totalAmount": 300,
   "currency": "TWD",
-  "payerId": "uuid-v4",
+  "payments": [
+    { "userId": "uuid-v4", "amount": 200 },
+    { "userId": "uuid-v4-2", "amount": 100 }
+  ],
   "groupId": "uuid-v4",
   "splitType": "EQUAL",
-  "memberIds": ["uuid-v4", "uuid-v4-2"]
+  "memberIds": ["uuid-v4", "uuid-v4-2"],
+  "date": "2026-03-31",
+  "category": "餐飲",
+  "type": "EXPENSE"
 }
 ```
 
-**Request Body（PERCENTAGE）**
+**Request Body（PERCENTAGE 百分比分攤）**
 ```json
 {
   "description": "晚餐",
-  "totalAmount": 1000,
   "currency": "TWD",
-  "payerId": "uuid-v4",
+  "payments": [
+    { "userId": "uuid-v4", "amount": 1000 }
+  ],
   "groupId": "uuid-v4",
   "splitType": "PERCENTAGE",
   "percentageMap": {
     "uuid-v4": 60,
     "uuid-v4-2": 40
-  }
+  },
+  "date": "2026-03-31",
+  "category": "餐飲",
+  "type": "EXPENSE"
 }
 ```
 
-**Request Body（EXACT）**
+**Request Body（EXACT 指定金額分攤）**
 ```json
 {
   "description": "計程車",
-  "totalAmount": 500,
   "currency": "TWD",
-  "payerId": "uuid-v4",
+  "payments": [
+    { "userId": "uuid-v4", "amount": 500 }
+  ],
   "groupId": "uuid-v4",
   "splitType": "EXACT",
   "exactMap": {
     "uuid-v4": 300,
     "uuid-v4-2": 200
-  }
+  },
+  "date": "2026-03-31",
+  "category": "交通",
+  "type": "EXPENSE"
+}
+```
+
+**Request Body（INCOME 收入）**
+```json
+{
+  "description": "薪水",
+  "currency": "TWD",
+  "payments": [
+    { "userId": "uuid-v4", "amount": 50000 }
+  ],
+  "groupId": "personal-group-id",
+  "splitType": "EQUAL",
+  "memberIds": ["uuid-v4"],
+  "date": "2026-03-31",
+  "category": "薪資",
+  "type": "INCOME"
 }
 ```
 
@@ -367,14 +469,18 @@
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | `description` | string | ✅ | 費用說明，不能為空 |
-| `totalAmount` | number | ✅ | 總金額，必須大於 0 |
 | `currency` | string | ❌ | 幣別，預設 `"TWD"` |
-| `payerId` | string | ✅ | 付款人 userId |
+| `payments` | Payment[] | ✅ | 付款人列表 (支援多人付款) |
+| `payments[].userId` | string | ✅ | 付款人 userId |
+| `payments[].amount` | number | ✅ | 該人付款金額 |
 | `groupId` | string | ✅ | 所屬群組 |
 | `splitType` | `"EQUAL"` \| `"PERCENTAGE"` \| `"EXACT"` | ✅ | 分帳模式 |
 | `memberIds` | string[] | EQUAL 必填 | 等額分帳成員清單 |
 | `percentageMap` | `Record<string, number>` | PERCENTAGE 必填 | 各成員百分比（總和須為 100）|
-| `exactMap` | `Record<string, number>` | EXACT 必填 | 各成員指定金額（總和須等於 totalAmount）|
+| `exactMap` | `Record<string, number>` | EXACT 必填 | 各成員指定金額（總和須等於 payments 總和）|
+| `date` | string | ❌ | 日期 (ISO 格式 YYYY-MM-DD)，預設今天 |
+| `category` | string | ❌ | 分類名稱，預設 `"其他"` |
+| `type` | `"EXPENSE"` \| `"INCOME"` | ❌ | 類型，預設 `"EXPENSE"` |
 
 **Response `201`**
 ```json
@@ -427,3 +533,11 @@
 |------|------|
 | Phase 5 | 初始版本：Users、Groups、Expenses 基礎 CRUD |
 | Phase 7 | 新增 JWT 認證；`POST /api/users/login`；Expense 加 `currency` 欄位；Groups/Expenses 受保護 |
+| Phase 9 | **多付款人支援**：`payments[]` 取代 `payerId`；支援多人共同付款 |
+| Phase 11 | **日期 + 分類系統**：Expense 新增 `date`、`category`、`type` 欄位；支援 INCOME 類型 |
+| Phase 12 | **QR Code 邀請**：新增 `POST /groups/:groupId/invites`、`POST /groups/join/:inviteCode` |
+
+---
+
+**文件版本**: 1.1  
+**最後更新**: 2026-03-31

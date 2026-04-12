@@ -24,6 +24,10 @@ const UpdateMeSchema = z.object({
   avatarUrl: z.string().url().nullable().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).optional(),
+  customCategories: z.object({
+    expense: z.array(z.string()),
+    income: z.array(z.string()),
+  }).optional(),
 });
 
 export class UserController {
@@ -125,6 +129,8 @@ export class UserController {
         email: user.email,
         name: user.name,
         personalGroupId: user.personalGroupId,
+        avatarUrl: user.avatarUrl ?? null,
+        customCategories: user.customCategories,
         token,
       },
     });
@@ -146,7 +152,7 @@ export class UserController {
       return;
     }
 
-    const { name, avatarUrl, currentPassword, newPassword } = parsed.data;
+    const { name, avatarUrl, currentPassword, newPassword, customCategories } = parsed.data;
 
     const user = await this.userRepo.findById(userId);
     if (!user) {
@@ -178,6 +184,10 @@ export class UserController {
       ...(avatarUrl !== undefined ? { avatarUrl } : {}),
     });
 
+    if (customCategories !== undefined) {
+      user.updateCustomCategories(customCategories);
+    }
+
     await this.userRepo.save(user);
 
     res.status(200).json({
@@ -188,6 +198,7 @@ export class UserController {
         email: user.email,
         avatarUrl: user.avatarUrl ?? null,
         personalGroupId: user.personalGroupId,
+        customCategories: user.customCategories,
       },
     });
   };

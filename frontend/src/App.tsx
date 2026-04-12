@@ -13,6 +13,7 @@ import GroupDetailPage from "@/pages/GroupDetailPage";
 import AddExpensePage from "@/pages/AddExpensePage";
 import BalancePage from "@/pages/BalancePage";
 import ProfilePage from "@/pages/ProfilePage";
+import JoinGroupPage from "@/pages/JoinGroupPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const userId = useAuthStore((s) => s.userId);
@@ -44,6 +45,16 @@ export default function App() {
               <GuestRoute>
                 <RegisterPage />
               </GuestRoute>
+            }
+          />
+
+          {/* Join Group (works both logged in and out) */}
+          <Route
+            path="/join/:inviteCode"
+            element={
+              <Layout>
+                <JoinGroupPage />
+              </Layout>
             }
           />
 

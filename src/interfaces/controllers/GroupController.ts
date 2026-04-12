@@ -4,6 +4,8 @@ import { Group, GroupType } from "@domain/entities/Group.js";
 import type { IGroupRepository } from "@domain/repositories/IGroupRepository.js";
 import type { GetGroupsUseCase } from "@application/use-cases/GetGroupsUseCase.js";
 import type { GetGroupMembersUseCase } from "@application/use-cases/GetGroupMembersUseCase.js";
+import type { CreateInviteUseCase } from "@application/use-cases/CreateInviteUseCase.js";
+import type { JoinByInviteUseCase } from "@application/use-cases/JoinByInviteUseCase.js";
 import { v4 as uuidv4 } from "uuid";
 
 const CreateGroupSchema = z.object({
@@ -21,6 +23,8 @@ export class GroupController {
     private groupRepo: IGroupRepository,
     private getGroupsUseCase: GetGroupsUseCase,
     private getGroupMembersUseCase: GetGroupMembersUseCase,
+    private createInviteUseCase: CreateInviteUseCase,
+    private joinByInviteUseCase: JoinByInviteUseCase,
   ) {}
 
   getGroups = async (
@@ -119,5 +123,67 @@ export class GroupController {
 
     await this.groupRepo.save(group);
     res.status(200).json({ success: true });
+  };
+
+  createInvite = async (
+    req: Request<{ groupId: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { groupId } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    if (!groupId) {
+      res.status(400).json({ success: false, error: "groupId is required" });
+      return;
+    }
+
+    const result = await this.createInviteUseCase.execute({
+      groupId,
+      creatorId: userId,
+    });
+
+    if (result.isFailure) {
+      res.status(422).json({ success: false, error: result.error });
+      return;
+    }
+
+    res.status(201).json({ success: true, data: result.getValue() });
+  };
+
+  joinByInvite = async (
+    req: Request<{ inviteCode: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { inviteCode } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    if (!inviteCode) {
+      res.status(400).json({ success: false, error: "inviteCode is required" });
+      return;
+    }
+
+    const result = await this.joinByInviteUseCase.execute({
+      inviteCode,
+      userId,
+    });
+
+    if (result.isFailure) {
+      res.status(422).json({ success: false, error: result.error });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: result.getValue() });
   };
 }

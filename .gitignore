@@ -27,3 +27,15 @@ yarn-error.log*
 # playwright reports
 playwright-report/
 test-results/
+
+api-doc.md
+ARCHITECTURE.md
+project.md
+process.md
+./github/agents
+
+terraform-sa-key.json
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*

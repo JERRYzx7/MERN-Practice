@@ -14,6 +14,10 @@ export function createGroupRouter(
   router.post("/:groupId/members", controller.addMember);
   router.get("/:groupId/balance", expenseController.getBalance);
   router.get("/:groupId/expenses", expenseController.getExpenses);
+  
+  // Invite routes
+  router.post("/:groupId/invites", controller.createInvite);
+  router.post("/join/:inviteCode", controller.joinByInvite);
 
   return router;
 }

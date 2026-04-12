@@ -31,6 +31,7 @@ describe("GetBalanceUseCase", () => {
     mockGroupRepo = {
       findById: vi.fn(),
       findByUserId: vi.fn(),
+      findByInviteCode: vi.fn(),
       isUserInGroup: vi.fn(),
       save: vi.fn(),
     };

@@ -23,6 +23,8 @@ export class MongoExpenseRepository implements IExpenseRepository {
           amount: s.amount,
         })),
         date: expense.props.date ?? new Date(),
+        category: expense.category,
+        type: expense.type,
       },
       { upsert: true, new: true },
     );
@@ -36,7 +38,15 @@ export class MongoExpenseRepository implements IExpenseRepository {
 
   async findByGroupId(groupId: string): Promise<Expense[]> {
     const docs = await ExpenseModel.find({ groupId }).lean();
-    return docs.map((d) => this.toDomain(d));
+    const results: Expense[] = [];
+    for (const d of docs) {
+      try {
+        results.push(this.toDomain(d));
+      } catch {
+        // skip legacy/malformed documents
+      }
+    }
+    return results;
   }
 
   private toDomain(doc: {
@@ -47,8 +57,10 @@ export class MongoExpenseRepository implements IExpenseRepository {
     payments: Array<{ userId: string; amount: number; note?: string }>;
     splits: Array<{ userId: string; amount: number }>;
     date: Date;
+    category?: string;
+    type?: string;
   }): Expense {
-    const payments = doc.payments.map(
+    const payments = (doc.payments ?? []).map(
       (p) =>
         new Payment({
           userId: p.userId,
@@ -56,7 +68,7 @@ export class MongoExpenseRepository implements IExpenseRepository {
           ...(p.note !== undefined ? { note: p.note } : {}),
         }),
     );
-    const splits = doc.splits.map(
+    const splits = (doc.splits ?? []).map(
       (s) => new Split({ userId: s.userId, amount: s.amount }),
     );
     const result = Expense.create(
@@ -67,6 +79,8 @@ export class MongoExpenseRepository implements IExpenseRepository {
         payments,
         splits,
         date: doc.date,
+        category: doc.category ?? "",
+        type: (doc.type === "INCOME" ? "INCOME" : "EXPENSE"),
       },
       doc._id,
     );

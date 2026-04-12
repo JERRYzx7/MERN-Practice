@@ -12,31 +12,20 @@ const PaymentSchema = z.object({
 
 const paymentsField = z.array(PaymentSchema).min(1);
 
+const commonFields = {
+  description: z.string().min(1),
+  currency: z.string().default("TWD"),
+  payments: paymentsField,
+  groupId: z.string().min(1),
+  date: z.string().optional(),
+  category: z.string().optional(),
+  type: z.enum(["EXPENSE", "INCOME"]).optional(),
+};
+
 const CreateExpenseSchema = z.discriminatedUnion("splitType", [
-  z.object({
-    description: z.string().min(1),
-    currency: z.string().default("TWD"),
-    payments: paymentsField,
-    groupId: z.string().min(1),
-    splitType: z.literal("EQUAL"),
-    memberIds: z.array(z.string()).min(1),
-  }),
-  z.object({
-    description: z.string().min(1),
-    currency: z.string().default("TWD"),
-    payments: paymentsField,
-    groupId: z.string().min(1),
-    splitType: z.literal("PERCENTAGE"),
-    percentageMap: z.record(z.string(), z.number().positive()),
-  }),
-  z.object({
-    description: z.string().min(1),
-    currency: z.string().default("TWD"),
-    payments: paymentsField,
-    groupId: z.string().min(1),
-    splitType: z.literal("EXACT"),
-    exactMap: z.record(z.string(), z.number().positive()),
-  }),
+  z.object({ ...commonFields, splitType: z.literal("EQUAL"), memberIds: z.array(z.string()).min(1) }),
+  z.object({ ...commonFields, splitType: z.literal("PERCENTAGE"), percentageMap: z.record(z.string(), z.number().positive()) }),
+  z.object({ ...commonFields, splitType: z.literal("EXACT"), exactMap: z.record(z.string(), z.number().positive()) }),
 ]);
 
 export class ExpenseController {
