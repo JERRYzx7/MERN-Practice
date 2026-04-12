@@ -1956,3 +1956,142 @@ gcloud scheduler jobs create http shutdown-cluster `
 - [ ] Prometheus + Grafana 監控
 - [ ] Vault 密鑰管理
 - [ ] Chaos Engineering (Litmus)
+
+---
+
+## Phase 6: 前後端對外入口 + TLS 完整收尾
+
+這一節會補齊「服務真正對外可用」的最後一哩路：
+
+1. 確認 frontend/backend 的 Deployment + Service
+2. 建立 app Ingress（同網域：`/` 給 frontend、`/api` 給 backend）
+3. TLS 使用既有 `ClusterIssuer`：`letsencrypt-prod`
+4. 提供驗證指令與成功判準
+5. 補充未來切換自有網域的操作
+
+> **重點**：TLS 可以沿用前面建立的 `letsencrypt-prod`，不需要重建一套 issuer。
+
+### 6.1 先確認叢集內服務已存在
+
+```powershell
+kubectl get deploy -n splitquest
+kubectl get svc -n splitquest
+```
+
+應至少看到類似：
+- `backend` Deployment/Service
+- `frontend` Deployment/Service
+
+---
+
+### 6.2 建立 App Ingress（先用 nip.io）
+
+先取得 ingress-nginx 的外部 IP：
+
+```powershell
+kubectl get svc -n ingress-nginx
+```
+
+假設外部 IP 是 `130.211.245.78`，可先用：
+- `app.130.211.245.78.nip.io`
+
+建立 Ingress（Windows PowerShell 可直接貼）：
+
+```powershell
+$yaml = @"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: splitquest-ingress
+  namespace: splitquest
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - app.130.211.245.78.nip.io
+      secretName: splitquest-tls
+  rules:
+    - host: app.130.211.245.78.nip.io
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+"@
+$yaml | kubectl apply -f -
+```
+
+> 把上面 `130.211.245.78` 換成你自己的 LoadBalancer IP。
+
+---
+
+### 6.3 驗證 Ingress 與 TLS
+
+```powershell
+kubectl get ingress -n splitquest
+kubectl describe ingress splitquest-ingress -n splitquest
+
+kubectl get clusterissuer
+kubectl describe clusterissuer letsencrypt-prod
+
+kubectl get certificate -n splitquest
+kubectl get certificaterequest -n splitquest
+kubectl get challenge -n splitquest
+```
+
+成功判準：
+1. `clusterissuer/letsencrypt-prod` 顯示 `Ready=True`
+2. `certificate` 顯示 `Ready=True`
+3. Ingress 有 ADDRESS，且 host 可解析
+4. `https://app.<LB_IP>.nip.io` 可正常開啟
+
+---
+
+### 6.4 Argo CD 觀測點
+
+在 Argo CD UI 或命令列確認：
+
+```powershell
+kubectl get applications -n argocd
+kubectl describe application splitquest -n argocd
+```
+
+應看到：
+- `Synced`
+- `Healthy`
+
+---
+
+### 6.5 之後切換成自有網域（重要）
+
+當你準備把 `nip.io` 換成正式 domain（例如 `app.example.com`）：
+
+1. 在 DNS 供應商新增 `A` 記錄：`app.example.com -> <ingress LB IP>`
+2. 更新 Ingress 的 `rules.host` 與 `tls.hosts` 為新網域
+3. 保留 `cert-manager.io/cluster-issuer: letsencrypt-prod`（不用改）
+4. 重新套用 Ingress，等待 cert-manager 重新簽發
+5. 用以下指令觀測：
+
+```powershell
+kubectl get ingress -n splitquest
+kubectl get certificate -n splitquest
+kubectl get challenge -n splitquest
+```
+
+切換完成判準：
+1. 新網域 `https://app.example.com` 可連線
+2. 憑證簽發者為 Let's Encrypt，且有效期正常
+3. `/` 與 `/api` 路由都可用
