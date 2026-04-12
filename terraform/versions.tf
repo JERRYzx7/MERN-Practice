@@ -12,13 +12,12 @@ terraform{
         }
     }
 
-    # 遠端狀態存儲 (GCS bucket 建好後再切回 gcs backend)
-    # backend "gcs" {
-    #   bucket      = "splitquest-terraform-state"
-    #   prefix      = "prod"
-    #   credentials = "../terraform-sa-key.json"
-    # }
-    backend "local" {}
+    # 遠端狀態存儲 (GCS)
+    backend "gcs" {
+      bucket      = "splitquest-prod-terraform-state"
+      prefix      = "prod"
+      credentials = "../terraform-sa-key.json"
+    }
 }
 
 provider "google" {
