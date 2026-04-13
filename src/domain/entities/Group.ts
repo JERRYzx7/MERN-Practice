@@ -119,4 +119,51 @@ export class Group extends Entity<GroupProps> {
 
     return Result.ok<void>();
   }
+
+  public removeMember(
+    requesterId: string,
+    targetUserId: string,
+  ): Result<{ groupDeleted: boolean }> {
+    if (this.props.type === GroupType.PERSONAL) {
+      return Result.fail<{ groupDeleted: boolean }>("個人群組不能移除成員");
+    }
+
+    if (!this.props.memberIds.includes(requesterId)) {
+      return Result.fail<{ groupDeleted: boolean }>("操作者不在該群組中");
+    }
+
+    if (!this.props.memberIds.includes(targetUserId)) {
+      return Result.fail<{ groupDeleted: boolean }>("目標成員不在該群組中");
+    }
+
+    const isSelfRemoval = requesterId === targetUserId;
+    const isOwnerRequester = requesterId === this.props.ownerId;
+
+    if (!isSelfRemoval && !isOwnerRequester) {
+      return Result.fail<{ groupDeleted: boolean }>("只有擁有者可以移除其他成員");
+    }
+
+    if (targetUserId === this.props.ownerId) {
+      if (!isSelfRemoval) {
+        return Result.fail<{ groupDeleted: boolean }>("不能由他人移除群組擁有者");
+      }
+
+      if (this.props.memberIds.length === 1) {
+        this.props.memberIds = [];
+        return Result.ok({ groupDeleted: true });
+      }
+
+      const nextOwner = this.props.memberIds.find((id) => id !== this.props.ownerId);
+      if (!nextOwner) {
+        return Result.fail<{ groupDeleted: boolean }>("無法轉移群組擁有者");
+      }
+
+      this.props.ownerId = nextOwner;
+      this.props.memberIds = this.props.memberIds.filter((id) => id !== targetUserId);
+      return Result.ok({ groupDeleted: false });
+    }
+
+    this.props.memberIds = this.props.memberIds.filter((id) => id !== targetUserId);
+    return Result.ok({ groupDeleted: false });
+  }
 }

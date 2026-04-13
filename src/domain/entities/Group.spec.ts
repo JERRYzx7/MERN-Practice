@@ -157,4 +157,84 @@ describe("Group Entity (群組實體測試)", () => {
       expect(result.error).toBe("您已經是群組成員");
     });
   });
+
+  describe("移除成員與離開群組", () => {
+    it("擁有者可以移除其他成員", () => {
+      const group = Group.create({
+        name: "旅遊分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId, mockFriendId],
+      }).getValue();
+
+      const result = group.removeMember(mockOwnerId, mockFriendId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().groupDeleted).toBe(false);
+      expect(group.memberIds).toEqual([mockOwnerId]);
+      expect(group.ownerId).toBe(mockOwnerId);
+    });
+
+    it("非擁有者不可移除其他成員", () => {
+      const group = Group.create({
+        name: "旅遊分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId, mockFriendId, "user-789"],
+      }).getValue();
+
+      const result = group.removeMember(mockFriendId, "user-789");
+
+      expect(result.isFailure).toBe(true);
+      expect(result.error).toBe("只有擁有者可以移除其他成員");
+    });
+
+    it("成員可自行離開群組", () => {
+      const group = Group.create({
+        name: "旅遊分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId, mockFriendId],
+      }).getValue();
+
+      const result = group.removeMember(mockFriendId, mockFriendId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().groupDeleted).toBe(false);
+      expect(group.memberIds).toEqual([mockOwnerId]);
+      expect(group.ownerId).toBe(mockOwnerId);
+    });
+
+    it("擁有者自行離開時會轉移 owner 給下一位成員", () => {
+      const nextOwnerId = "user-999";
+      const group = Group.create({
+        name: "旅遊分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId, nextOwnerId, mockFriendId],
+      }).getValue();
+
+      const result = group.removeMember(mockOwnerId, mockOwnerId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().groupDeleted).toBe(false);
+      expect(group.ownerId).toBe(nextOwnerId);
+      expect(group.memberIds).toEqual([nextOwnerId, mockFriendId]);
+    });
+
+    it("最後一位擁有者離開時標記為刪除群組", () => {
+      const group = Group.create({
+        name: "旅遊分帳",
+        type: GroupType.TEAM,
+        ownerId: mockOwnerId,
+        memberIds: [mockOwnerId],
+      }).getValue();
+
+      const result = group.removeMember(mockOwnerId, mockOwnerId);
+
+      expect(result.isSuccess).toBe(true);
+      expect(result.getValue().groupDeleted).toBe(true);
+      expect(group.memberIds).toEqual([]);
+    });
+  });
 });
