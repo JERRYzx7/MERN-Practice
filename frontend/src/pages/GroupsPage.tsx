@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
 import { groupApi, ApiError } from "@/lib/api";
@@ -14,7 +14,10 @@ export default function GroupsPage() {
   const [showForm, setShowForm] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [error, setError] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [joinError, setJoinError] = useState("");
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
     queryKey: ["groups"],
@@ -41,6 +44,23 @@ export default function GroupsPage() {
     },
   });
 
+  const joinMutation = useMutation({
+    mutationFn: (code: string) => groupApi.joinByInvite(code),
+    onSuccess: (res) => {
+      setInviteCode("");
+      setJoinError("");
+      void qc.invalidateQueries({ queryKey: ["groups"] });
+      navigate(`/groups/${res.data.groupId}`);
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setJoinError(err.message);
+      } else {
+        setJoinError("加入群組失敗，請稍後再試");
+      }
+    },
+  });
+
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -49,6 +69,17 @@ export default function GroupsPage() {
       return;
     }
     mutation.mutate();
+  }
+
+  function handleJoinByCode(e: React.FormEvent) {
+    e.preventDefault();
+    setJoinError("");
+    const code = inviteCode.trim();
+    if (!code) {
+      setJoinError("請輸入小組代碼");
+      return;
+    }
+    joinMutation.mutate(code);
   }
 
   if (isLoading) return <GlassLoader />;
@@ -104,6 +135,32 @@ export default function GroupsPage() {
           </form>
         </GlassCard>
       )}
+
+      <GlassCard
+        title="透過小組代碼加入"
+        variant="teal"
+        titleIcon={
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+        }
+      >
+        <form onSubmit={handleJoinByCode} aria-label="小組代碼加入表單" className="space-y-3">
+          <GlassInput
+            label="小組代碼"
+            type="text"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            error={joinError}
+            placeholder="貼上邀請代碼"
+            required
+          />
+          <GlassButton type="submit" variant="secondary" fullWidth loading={joinMutation.isPending}>
+            加入群組
+          </GlassButton>
+        </form>
+      </GlassCard>
 
       {/* Groups list */}
       {teamGroups.length === 0 ? (
