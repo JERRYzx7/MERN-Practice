@@ -56,6 +56,22 @@ interface PaymentRow {
   note: string;
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function normalizeCustomCategories(
+  value: unknown,
+): { expense: string[]; income: string[] } {
+  if (!value || typeof value !== "object") return { expense: [], income: [] };
+  const raw = value as { expense?: unknown; income?: unknown };
+  return {
+    expense: normalizeStringArray(raw.expense),
+    income: normalizeStringArray(raw.income),
+  };
+}
+
 export default function AddExpensePage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { userId, personalGroupId, customCategories: storeCategories, updateUserInfo } = useAuthStore();
@@ -71,7 +87,8 @@ export default function AddExpensePage() {
   const [category, setCategory] = useState("");
   const [customInput, setCustomInput] = useState("");
 
-  const customCategories = entryType === "INCOME" ? storeCategories.income : storeCategories.expense;
+  const normalizedCategories = normalizeCustomCategories(storeCategories);
+  const customCategories = entryType === "INCOME" ? normalizedCategories.income : normalizedCategories.expense;
 
   function switchEntryType(t: "EXPENSE" | "INCOME") {
     setEntryType(t);
@@ -81,8 +98,8 @@ export default function AddExpensePage() {
   async function addCustomCategory(name: string) {
     if (!name || customCategories.includes(name) || customCategories.length >= MAX_CUSTOM) return;
     const updated = {
-      expense: entryType === "EXPENSE" ? [...storeCategories.expense, name] : storeCategories.expense,
-      income:  entryType === "INCOME"  ? [...storeCategories.income,  name] : storeCategories.income,
+      expense: entryType === "EXPENSE" ? [...normalizedCategories.expense, name] : normalizedCategories.expense,
+      income:  entryType === "INCOME"  ? [...normalizedCategories.income,  name] : normalizedCategories.income,
     };
     try {
       await userApi.updateProfile({ customCategories: updated });

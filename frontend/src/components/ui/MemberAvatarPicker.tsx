@@ -13,13 +13,15 @@ export function MemberAvatarPicker({
   onToggle,
   label = "選擇成員",
 }: MemberAvatarPickerProps) {
+  const safeMembers = Array.isArray(members) ? members : [];
+
   return (
     <div>
       {label && (
         <p className="font-pixel text-[9px] text-slate-400 uppercase tracking-widest mb-3">{label}</p>
       )}
       <div className="flex flex-wrap gap-3">
-        {members.map((m) => {
+        {safeMembers.map((m) => {
           const isSelected = selected.includes(m.id);
           return (
             <button
