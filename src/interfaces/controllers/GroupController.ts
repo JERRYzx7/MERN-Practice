@@ -6,6 +6,7 @@ import type { GetGroupsUseCase } from "@application/use-cases/GetGroupsUseCase.j
 import type { GetGroupMembersUseCase } from "@application/use-cases/GetGroupMembersUseCase.js";
 import type { CreateInviteUseCase } from "@application/use-cases/CreateInviteUseCase.js";
 import type { JoinByInviteUseCase } from "@application/use-cases/JoinByInviteUseCase.js";
+import type { RemoveGroupMemberUseCase } from "@application/use-cases/RemoveGroupMemberUseCase.js";
 import { v4 as uuidv4 } from "uuid";
 
 const CreateGroupSchema = z.object({
@@ -25,6 +26,7 @@ export class GroupController {
     private getGroupMembersUseCase: GetGroupMembersUseCase,
     private createInviteUseCase: CreateInviteUseCase,
     private joinByInviteUseCase: JoinByInviteUseCase,
+    private removeGroupMemberUseCase: RemoveGroupMemberUseCase,
   ) {}
 
   getGroups = async (
@@ -186,4 +188,80 @@ export class GroupController {
 
     res.status(200).json({ success: true, data: result.getValue() });
   };
+
+  removeMember = async (
+    req: Request<{ groupId: string; memberId: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { groupId, memberId } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    if (!groupId || !memberId) {
+      res.status(400).json({ success: false, error: "groupId and memberId are required" });
+      return;
+    }
+
+    const result = await this.removeGroupMemberUseCase.execute({
+      groupId,
+      requesterId: userId,
+      targetMemberId: memberId,
+    });
+
+    if (result.isFailure) {
+      const message = result.error ?? "移除成員失敗";
+      const status = this.mapRemoveMemberErrorStatus(message);
+      res.status(status).json({ success: false, error: message });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: result.getValue() });
+  };
+
+  leaveGroup = async (
+    req: Request<{ groupId: string }>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const { groupId } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    if (!groupId) {
+      res.status(400).json({ success: false, error: "groupId is required" });
+      return;
+    }
+
+    const result = await this.removeGroupMemberUseCase.execute({
+      groupId,
+      requesterId: userId,
+      targetMemberId: userId,
+    });
+
+    if (result.isFailure) {
+      const message = result.error ?? "離開群組失敗";
+      const status = this.mapRemoveMemberErrorStatus(message);
+      res.status(status).json({ success: false, error: message });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: result.getValue() });
+  };
+
+  private mapRemoveMemberErrorStatus(message: string): number {
+    if (message.includes("找不到該群組")) return 404;
+    if (message.includes("只有擁有者")) return 403;
+    if (message.includes("不在該群組")) return 422;
+    if (message.includes("不能由他人移除")) return 403;
+    return 422;
+  }
 }

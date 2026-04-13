@@ -12,6 +12,8 @@ export function createGroupRouter(
   router.post("/", controller.createGroup);
   router.get("/:groupId/members", controller.getMembers);
   router.post("/:groupId/members", controller.addMember);
+  router.delete("/:groupId/members/me", controller.leaveGroup);
+  router.delete("/:groupId/members/:memberId", controller.removeMember);
   router.get("/:groupId/balance", expenseController.getBalance);
   router.get("/:groupId/expenses", expenseController.getExpenses);
   

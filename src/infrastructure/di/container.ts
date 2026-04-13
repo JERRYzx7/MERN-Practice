@@ -10,6 +10,7 @@ import { GetExpensesUseCase } from "@application/use-cases/GetExpensesUseCase.js
 import { GetGroupMembersUseCase } from "@application/use-cases/GetGroupMembersUseCase.js";
 import { CreateInviteUseCase } from "@application/use-cases/CreateInviteUseCase.js";
 import { JoinByInviteUseCase } from "@application/use-cases/JoinByInviteUseCase.js";
+import { RemoveGroupMemberUseCase } from "@application/use-cases/RemoveGroupMemberUseCase.js";
 import { ExpenseController } from "@interfaces/controllers/ExpenseController.js";
 import { GroupController } from "@interfaces/controllers/GroupController.js";
 import { UserController } from "@interfaces/controllers/UserController.js";
@@ -43,6 +44,7 @@ export function buildContainer(): AppContainer {
   const getGroupMembersUseCase = new GetGroupMembersUseCase(groupRepo, userRepo);
   const createInviteUseCase = new CreateInviteUseCase(groupRepo);
   const joinByInviteUseCase = new JoinByInviteUseCase(groupRepo);
+  const removeGroupMemberUseCase = new RemoveGroupMemberUseCase(groupRepo, expenseRepo);
 
   // Interface Controllers
   const expenseController = new ExpenseController(createExpenseUseCase, getBalanceUseCase, getExpensesUseCase);
@@ -52,6 +54,7 @@ export function buildContainer(): AppContainer {
     getGroupMembersUseCase,
     createInviteUseCase,
     joinByInviteUseCase,
+    removeGroupMemberUseCase,
   );
   const userController = new UserController(userRepo, groupRepo, passwordService, jwtService);
 

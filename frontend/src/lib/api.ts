@@ -173,6 +173,22 @@ export const groupApi = {
       body: JSON.stringify({ userId }),
     }),
 
+  removeMember: (groupId: string, memberId: string) =>
+    request<{
+      success: true;
+      data: { groupId: string; deletedGroup: boolean; ownerId?: string; memberIds?: string[] };
+    }>(`/groups/${groupId}/members/${memberId}`, {
+      method: "DELETE",
+    }),
+
+  leaveGroup: (groupId: string) =>
+    request<{
+      success: true;
+      data: { groupId: string; deletedGroup: boolean; ownerId?: string; memberIds?: string[] };
+    }>(`/groups/${groupId}/members/me`, {
+      method: "DELETE",
+    }),
+
   getBalance: (groupId: string) =>
     request<{
       success: true;

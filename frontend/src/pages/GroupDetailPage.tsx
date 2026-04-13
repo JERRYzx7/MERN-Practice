@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/stores/authStore";
-import { groupApi } from "@/lib/api";
+import { groupApi, ApiError } from "@/lib/api";
 import { useLocalGroups } from "@/hooks/useLocalGroups";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassButton } from "@/components/ui/GlassButton";
@@ -14,10 +14,19 @@ export default function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { userId, personalGroupId } = useAuthStore();
   const { groups } = useLocalGroups();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const group = groups.find((g) => g.id === groupId);
   const isTeamGroup = groupId !== personalGroupId;
 
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [memberActionError, setMemberActionError] = useState("");
+
+  const { data: groupsData } = useQuery({
+    queryKey: ["groups"],
+    queryFn: () => groupApi.getGroups(),
+    enabled: !!userId,
+  });
 
   const { data: membersData, isLoading: isLoadingMembers } = useQuery({
     queryKey: ["members", groupId],
@@ -34,6 +43,53 @@ export default function GroupDetailPage() {
   const members = membersData?.data ?? [];
   const settlements = balanceData?.data.settlements ?? [];
   const myBalance = balanceData?.data.netBalances[userId!] ?? 0;
+  const currentGroup = groupsData?.data.find((g) => g.id === groupId);
+  const isOwner = currentGroup?.ownerId === userId;
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) => groupApi.removeMember(groupId!, memberId),
+    onSuccess: () => {
+      setMemberActionError("");
+      void qc.invalidateQueries({ queryKey: ["members", groupId] });
+      void qc.invalidateQueries({ queryKey: ["groups"] });
+      void qc.invalidateQueries({ queryKey: ["balance", groupId] });
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setMemberActionError(err.message);
+      } else {
+        setMemberActionError("操作失敗，請稍後再試");
+      }
+    },
+  });
+
+  const leaveGroupMutation = useMutation({
+    mutationFn: () => groupApi.leaveGroup(groupId!),
+    onSuccess: () => {
+      setMemberActionError("");
+      void qc.invalidateQueries({ queryKey: ["groups"] });
+      navigate("/groups");
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        setMemberActionError(err.message);
+      } else {
+        setMemberActionError("離開群組失敗，請稍後再試");
+      }
+    },
+  });
+
+  function handleRemoveMember(memberId: string, memberName: string) {
+    const ok = window.confirm(`確定要移除 ${memberName} 嗎？`);
+    if (!ok) return;
+    removeMemberMutation.mutate(memberId);
+  }
+
+  function handleLeaveGroup() {
+    const ok = window.confirm("確定要離開這個群組嗎？");
+    if (!ok) return;
+    leaveGroupMutation.mutate();
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -143,12 +199,22 @@ export default function GroupDetailPage() {
                       <span className="text-neon-teal ml-1.5 text-xs">(你)</span>
                     )}
                   </span>
+                  {isOwner && member.id !== userId && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.id, member.name)}
+                      className="text-xs text-neon-red hover:opacity-75 transition-opacity cursor-pointer"
+                      disabled={removeMemberMutation.isPending || leaveGroupMutation.isPending}
+                    >
+                      移除
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          <div className="mt-4 pt-3 border-t border-white/5">
+          <div className="mt-4 pt-3 border-t border-white/5 space-y-2">
             <GlassButton
               variant="secondary"
               fullWidth
@@ -156,6 +222,17 @@ export default function GroupDetailPage() {
             >
               邀請好友加入
             </GlassButton>
+            <GlassButton
+              variant="ghost"
+              fullWidth
+              onClick={handleLeaveGroup}
+              loading={leaveGroupMutation.isPending}
+            >
+              離開群組
+            </GlassButton>
+            {memberActionError && (
+              <p className="text-xs text-neon-red text-center">{memberActionError}</p>
+            )}
           </div>
         </GlassCard>
       )}
