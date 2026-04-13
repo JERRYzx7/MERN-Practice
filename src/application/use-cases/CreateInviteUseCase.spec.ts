@@ -15,6 +15,7 @@ describe("CreateInviteUseCase（建立邀請連結用例測試）", () => {
       findByUserId: vi.fn(),
       findByInviteCode: vi.fn(),
       isUserInGroup: vi.fn(),
+      deleteById: vi.fn(),
     };
     useCase = new CreateInviteUseCase(mockGroupRepo);
   });

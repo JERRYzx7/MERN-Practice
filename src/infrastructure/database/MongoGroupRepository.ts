@@ -45,6 +45,10 @@ export class MongoGroupRepository implements IGroupRepository {
     );
   }
 
+  async deleteById(id: string): Promise<void> {
+    await GroupModel.findByIdAndDelete(id);
+  }
+
   private toDomain(doc: IGroupDocument): Group {
     const result = Group.create(
       {

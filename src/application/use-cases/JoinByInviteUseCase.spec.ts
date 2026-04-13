@@ -14,6 +14,7 @@ describe("JoinByInviteUseCase（透過邀請加入群組用例測試）", () => 
       findByUserId: vi.fn(),
       findByInviteCode: vi.fn(),
       isUserInGroup: vi.fn(),
+      deleteById: vi.fn(),
     };
     useCase = new JoinByInviteUseCase(mockGroupRepo);
   });

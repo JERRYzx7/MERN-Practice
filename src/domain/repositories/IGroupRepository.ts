@@ -6,4 +6,5 @@ export interface IGroupRepository {
   findByInviteCode(inviteCode: string): Promise<Group | null>;
   isUserInGroup(userId: string, groupId: string): Promise<boolean>;
   save(group: Group): Promise<void>;
+  deleteById(id: string): Promise<void>;
 }

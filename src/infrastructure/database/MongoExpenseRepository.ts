@@ -49,6 +49,10 @@ export class MongoExpenseRepository implements IExpenseRepository {
     return results;
   }
 
+  async deleteByGroupId(groupId: string): Promise<void> {
+    await ExpenseModel.deleteMany({ groupId });
+  }
+
   private toDomain(doc: {
     _id: string;
     description: string;

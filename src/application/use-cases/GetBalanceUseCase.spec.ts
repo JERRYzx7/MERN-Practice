@@ -34,11 +34,13 @@ describe("GetBalanceUseCase", () => {
       findByInviteCode: vi.fn(),
       isUserInGroup: vi.fn(),
       save: vi.fn(),
+      deleteById: vi.fn(),
     };
     mockExpenseRepo = {
       save: vi.fn(),
       findById: vi.fn(),
       findByGroupId: vi.fn(),
+      deleteByGroupId: vi.fn(),
     };
     useCase = new GetBalanceUseCase(mockGroupRepo, mockExpenseRepo);
   });

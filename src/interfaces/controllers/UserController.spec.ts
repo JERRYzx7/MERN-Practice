@@ -29,6 +29,7 @@ describe("UserController.updateMe", () => {
       findByInviteCode: vi.fn(),
       isUserInGroup: vi.fn(),
       save: vi.fn(),
+      deleteById: vi.fn(),
     };
     mockPasswordService = {
       hash: vi.fn(),
